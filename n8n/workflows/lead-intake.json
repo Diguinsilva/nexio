@@ -1,0 +1,506 @@
+{
+  "name": "Lead Intake & SDR Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "lead-intake",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "name": "Webhook - New Lead",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "webhookId": "lead-intake-webhook"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "tableId": "leads",
+        "returnAll": false,
+        "limit": 1,
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "keyValue": "={{ $json.lead_id }}"
+            }
+          ]
+        }
+      },
+      "name": "Get Lead from Supabase",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [450, 300],
+      "credentials": {
+        "supabaseApi": {
+          "id": "1",
+          "name": "Supabase Nexio.AI"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.phone }}",
+              "value2": true,
+              "operation": "exists"
+            }
+          ]
+        }
+      },
+      "name": "Has Phone?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://api.cnpj.ws/{{ $json.company_name }}",
+        "options": {}
+      },
+      "name": "Enrich - CNPJ Data",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [850, 200]
+    },
+    {
+      "parameters": {
+        "url": "https://serpapi.com/search",
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "q",
+              "value": "={{ $json.company_name }}"
+            },
+            {
+              "name": "api_key",
+              "value": "={{ $credentials.serpApiKey }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Enrich - Google Search",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [850, 400]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "leads",
+        "id": "={{ $json.id }}",
+        "fieldsToSend": "defineFields",
+        "fields": {
+          "mappingMode": "defineFields",
+          "value": {
+            "enrichment_data": "={{ JSON.stringify($json) }}"
+          }
+        }
+      },
+      "name": "Update Lead - Enrichment",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [1050, 300],
+      "credentials": {
+        "supabaseApi": {
+          "id": "1",
+          "name": "Supabase Nexio.AI"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o",
+        "prompt": "=Você é um SDR consultivo da empresa. Gere uma mensagem curta, humana e personalizada para {{ $json.name }}, empreendedor de {{ $json.city }}, ramo {{ $json.company_name }}.\n\nObjetivo: iniciar conversa oferecendo nossa solução de automação de vendas Nexio.AI.\n\nRequisitos:\n- Tom consultivo e amigável\n- Máximo 3 frases\n- Sem jargões técnicos\n- Personalizada com dados do lead\n- Incluir pergunta para engajamento\n\nRetorne APENAS a mensagem, sem formatação adicional.",
+        "options": {
+          "temperature": 0.7,
+          "maxTokens": 150
+        }
+      },
+      "name": "OpenAI - Generate Initial Message",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1,
+      "position": [1250, 300],
+      "credentials": {
+        "openAiApi": {
+          "id": "2",
+          "name": "OpenAI Nexio.AI"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o",
+        "prompt": "=Analise o lead abaixo e calcule um score de fit (0-100) considerando:\n- Presença de dados (telefone, email, website)\n- Cidade (prioridade: São Paulo, Rio, BH)\n- Categoria de negócio\n- Potencial de compra\n\nLead:\n{{ JSON.stringify($json) }}\n\nRetorne APENAS um JSON com:\n{\n  \"score\": <número de 0 a 100>,\n  \"reason\": \"<1 frase explicando o score>\"\n}",
+        "options": {
+          "temperature": 0.3,
+          "maxTokens": 100,
+          "responseFormat": "json_object"
+        }
+      },
+      "name": "OpenAI - Calculate Fit Score",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1,
+      "position": [1250, 500],
+      "credentials": {
+        "openAiApi": {
+          "id": "2",
+          "name": "OpenAI Nexio.AI"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combinationMode": "mergeByPosition"
+      },
+      "name": "Merge Data",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 1,
+      "position": [1450, 400]
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "tableId": "conversations",
+        "fieldsToSend": "defineFields",
+        "fields": {
+          "mappingMode": "defineFields",
+          "value": {
+            "tenant_id": "={{ $json.tenant_id }}",
+            "lead_id": "={{ $json.id }}",
+            "message": "={{ $('OpenAI - Generate Initial Message').item.json.choices[0].message.content }}",
+            "message_type": "text",
+            "direction": "out",
+            "status": "pending"
+          }
+        }
+      },
+      "name": "Save Message to DB",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [1650, 300],
+      "credentials": {
+        "supabaseApi": {
+          "id": "1",
+          "name": "Supabase Nexio.AI"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.auto_send }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "name": "Should Auto-Send?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1850, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.BACKEND_URL }}/api/conversations/send",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "lead_id",
+              "value": "={{ $json.lead_id }}"
+            },
+            {
+              "name": "message",
+              "value": "={{ $('OpenAI - Generate Initial Message').item.json.choices[0].message.content }}"
+            },
+            {
+              "name": "phone",
+              "value": "={{ $json.phone }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Send WhatsApp Message",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [2050, 200],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "3",
+          "name": "Backend API Auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {}
+      },
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [2250, 300]
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "tableId": "tasks",
+        "fieldsToSend": "defineFields",
+        "fields": {
+          "mappingMode": "defineFields",
+          "value": {
+            "tenant_id": "={{ $json.tenant_id }}",
+            "lead_id": "={{ $json.id }}",
+            "title": "Follow-up inicial",
+            "description": "Aguardar resposta do lead e fazer follow-up se necessário",
+            "type": "follow_up",
+            "priority": "medium",
+            "status": "pending",
+            "due_date": "={{ DateTime.now().plus({ days: 3 }).toISO() }}"
+          }
+        }
+      },
+      "name": "Create Follow-up Task",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [2050, 400],
+      "credentials": {
+        "supabaseApi": {
+          "id": "1",
+          "name": "Supabase Nexio.AI"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "leads",
+        "id": "={{ $json.id }}",
+        "fieldsToSend": "defineFields",
+        "fields": {
+          "mappingMode": "defineFields",
+          "value": {
+            "score": "={{ JSON.parse($('OpenAI - Calculate Fit Score').item.json.choices[0].message.content).score }}",
+            "stage": "contacted",
+            "notes": "={{ $json.notes + '\\n\\nIA Score: ' + JSON.parse($('OpenAI - Calculate Fit Score').item.json.choices[0].message.content).reason }}"
+          }
+        }
+      },
+      "name": "Update Lead - Score & Stage",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [1650, 500],
+      "credentials": {
+        "supabaseApi": {
+          "id": "1",
+          "name": "Supabase Nexio.AI"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook - New Lead": {
+      "main": [
+        [
+          {
+            "node": "Get Lead from Supabase",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Lead from Supabase": {
+      "main": [
+        [
+          {
+            "node": "Has Phone?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Phone?": {
+      "main": [
+        [
+          {
+            "node": "Enrich - CNPJ Data",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Enrich - Google Search",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enrich - CNPJ Data": {
+      "main": [
+        [
+          {
+            "node": "Update Lead - Enrichment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enrich - Google Search": {
+      "main": [
+        [
+          {
+            "node": "Update Lead - Enrichment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Lead - Enrichment": {
+      "main": [
+        [
+          {
+            "node": "OpenAI - Generate Initial Message",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "OpenAI - Calculate Fit Score",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI - Generate Initial Message": {
+      "main": [
+        [
+          {
+            "node": "Merge Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI - Calculate Fit Score": {
+      "main": [
+        [
+          {
+            "node": "Merge Data",
+            "type": "main",
+            "index": 1
+          },
+          {
+            "node": "Update Lead - Score & Stage",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Data": {
+      "main": [
+        [
+          {
+            "node": "Save Message to DB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Message to DB": {
+      "main": [
+        [
+          {
+            "node": "Should Auto-Send?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Should Auto-Send?": {
+      "main": [
+        [
+          {
+            "node": "Send WhatsApp Message",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Create Follow-up Task",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create Follow-up Task",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send WhatsApp Message": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Follow-up Task": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Lead - Score & Stage": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {},
+  "id": "1"
+}

@@ -1,0 +1,125 @@
+version: '3.8'
+
+services:
+  # ==================== REDIS (Cache & Jobs) ====================
+  redis:
+    image: redis:7-alpine
+    container_name: nexio-redis
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    networks:
+      - nexio-network
+
+  # ==================== N8N (Workflow Automation) ====================
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: nexio-n8n
+    ports:
+      - '5678:5678'
+    environment:
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=admin
+      - N8N_BASIC_AUTH_PASSWORD=nexio2025
+      - N8N_HOST=localhost
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - WEBHOOK_URL=http://localhost:5678/
+      - GENERIC_TIMEZONE=America/Sao_Paulo
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./n8n/workflows:/home/node/.n8n/workflows
+    depends_on:
+      - redis
+    networks:
+      - nexio-network
+
+  # ==================== PostgreSQL (Opcional - se não usar Supabase Cloud) ====================
+  # postgres:
+  #   image: postgres:15-alpine
+  #   container_name: nexio-postgres
+  #   ports:
+  #     - '5432:5432'
+  #   environment:
+  #     POSTGRES_USER: nexio
+  #     POSTGRES_PASSWORD: nexio2025
+  #     POSTGRES_DB: nexio_db
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #     - ./supabase/migrations:/docker-entrypoint-initdb.d
+  #   networks:
+  #     - nexio-network
+
+  # ==================== Backend (Node.js API) ====================
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: nexio-backend
+    ports:
+      - '3000:3000'
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+      - REDIS_URL=redis://redis:6379
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - APIFY_API_KEY=${APIFY_API_KEY}
+      - TWILIO_ACCOUNT_SID=${TWILIO_ACCOUNT_SID}
+      - TWILIO_AUTH_TOKEN=${TWILIO_AUTH_TOKEN}
+      - TWILIO_WHATSAPP_NUMBER=${TWILIO_WHATSAPP_NUMBER}
+      - N8N_WEBHOOK_URL=http://n8n:5678/webhook
+      - JWT_SECRET=${JWT_SECRET}
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    depends_on:
+      - redis
+      - n8n
+    networks:
+      - nexio-network
+    # Apenas em desenvolvimento - hot reload
+    # command: pnpm dev
+
+  # ==================== Frontend (React) ====================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: nexio-frontend
+    ports:
+      - '5173:5173'
+    environment:
+      - VITE_API_URL=http://localhost:3000
+      - VITE_WS_URL=ws://localhost:3000
+      - VITE_SUPABASE_URL=${SUPABASE_URL}
+      - VITE_SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+    networks:
+      - nexio-network
+    # Apenas em desenvolvimento - hot reload
+    # command: pnpm dev
+
+volumes:
+  redis_data:
+    driver: local
+  n8n_data:
+    driver: local
+  # postgres_data:
+  #   driver: local
+
+networks:
+  nexio-network:
+    driver: bridge

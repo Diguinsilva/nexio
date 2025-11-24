@@ -1,0 +1,62 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Color tokens - Purple dominant */
+    --color-primary: #5415AC;
+    --color-accent-orange: #ED4F22;
+    --color-accent-pink: #FD0685;
+
+    /* Gradients */
+    --gradient-primary: linear-gradient(90deg, #5415AC 0%, #ED4F22 50%, #FD0685 100%);
+
+    /* Backgrounds */
+    --bg-primary: #FFFFFF;
+    --bg-secondary: #F9FAFB;
+    --bg-tertiary: #F3F4F6;
+
+    /* Text */
+    --text-primary: #111827;
+    --text-secondary: #6B7280;
+    --text-tertiary: #9CA3AF;
+
+    /* Borders */
+    --border-primary: #E5E7EB;
+    --border-secondary: #D1D5DB;
+  }
+
+  [data-theme="dark"] {
+    /* Dark mode overrides */
+    --bg-primary: #0A0A0F;
+    --bg-secondary: #14141F;
+    --bg-tertiary: #1E1E2F;
+
+    --text-primary: #F9FAFB;
+    --text-secondary: #D1D5DB;
+    --text-tertiary: #9CA3AF;
+
+    --border-primary: #374151;
+    --border-secondary: #4B5563;
+  }
+
+  * {
+    @apply border-border-primary;
+  }
+
+  body {
+    @apply bg-bg-primary text-text-primary;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+      'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+      sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+@layer utilities {
+  .bg-gradient-primary {
+    background: var(--gradient-primary);
+  }
+}
