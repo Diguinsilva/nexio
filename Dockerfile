@@ -4,19 +4,16 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 
 # Copiar package files
-COPY package.json pnpm-lock.yaml* ./
-
-# Instalar pnpm
-RUN npm install -g pnpm
+COPY package*.json ./
 
 # Instalar dependências
-RUN pnpm install --frozen-lockfile
+RUN npm ci --only=production || npm install
 
 # Copiar código fonte
 COPY . .
 
 # Build Vite (production)
-RUN pnpm build
+RUN npm run build
 
 # Estágio de produção - servir com nginx
 FROM nginx:alpine
