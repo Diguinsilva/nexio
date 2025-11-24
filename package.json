@@ -1,36 +1,51 @@
 {
-  "name": "lukaya-griffe-erp",
-  "private": true,
+  "name": "nexio-ai-frontend",
   "version": "1.0.0",
+  "description": "Frontend Nexio.AI - CRM Automação de vendas com IA",
   "type": "module",
-  "description": "Sistema ERP e Catálogo para Lukaya Griffe",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "tsc && vite build",
     "preview": "vite preview",
-    "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0"
+    "lint": "eslint src --ext .ts,.tsx"
   },
   "dependencies": {
-    "@dnd-kit/core": "^6.3.1",
-    "@dnd-kit/sortable": "^10.0.0",
-    "@dnd-kit/utilities": "^3.2.2",
-    "@supabase/supabase-js": "^2.83.0",
-    "lucide-react": "^0.294.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "react-toastify": "^11.0.5"
+    "react-router-dom": "^6.21.1",
+    "zustand": "^4.4.7",
+    "@tanstack/react-query": "^5.17.0",
+    "@supabase/supabase-js": "^2.39.0",
+    "socket.io-client": "^4.6.1",
+    "axios": "^1.6.2",
+    "date-fns": "^3.0.6",
+    "clsx": "^2.1.0",
+    "framer-motion": "^10.18.0",
+    "gsap": "^3.12.4",
+    "recharts": "^2.10.3",
+    "react-dnd": "^16.0.1",
+    "react-dnd-html5-backend": "^16.0.1",
+    "react-hot-toast": "^2.4.1",
+    "lucide-react": "^0.303.0",
+    "zod": "^3.22.4"
   },
   "devDependencies": {
-    "@types/react": "^18.2.43",
-    "@types/react-dom": "^18.2.17",
+    "@types/react": "^18.2.47",
+    "@types/react-dom": "^18.2.18",
+    "@typescript-eslint/eslint-plugin": "^6.16.0",
+    "@typescript-eslint/parser": "^6.16.0",
     "@vitejs/plugin-react": "^4.2.1",
-    "autoprefixer": "^10.4.16",
-    "eslint": "^8.55.0",
-    "eslint-plugin-react": "^7.33.2",
+    "typescript": "^5.3.3",
+    "vite": "^5.0.10",
+    "eslint": "^8.56.0",
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.5",
-    "postcss": "^8.4.32",
-    "tailwindcss": "^3.3.6",
-    "vite": "^5.0.8"
+    "autoprefixer": "^10.4.16",
+    "postcss": "^8.4.33",
+    "tailwindcss": "^3.4.0"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=8.0.0"
   }
 }

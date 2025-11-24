@@ -4,24 +4,31 @@ export default {
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
-  // Configuração para suportar dark mode baseado em classe
   darkMode: 'class',
   theme: {
     extend: {
       colors: {
-        'lukaya-yellow': {
-          50: '#fefce8',
-          100: '#fef9c3',
-          200: '#fef08a',
-          300: '#fde047',
-          400: '#facc15',
-          500: '#eab308',
-          600: '#ca8a04',
-          700: '#a16207',
-          800: '#854d0e',
-          900: '#713f12',
-        }
-      }
+        primary: {
+          DEFAULT: '#5415AC',
+          50: '#E8D9F8',
+          100: '#D9C3F4',
+          200: '#BB99EA',
+          300: '#9D6FE0',
+          400: '#7F45D6',
+          500: '#5415AC',
+          600: '#451189',
+          700: '#360D66',
+          800: '#270943',
+          900: '#180520',
+        },
+        accent: {
+          orange: '#ED4F22',
+          pink: '#FD0685',
+        },
+      },
+      backgroundImage: {
+        'gradient-primary': 'linear-gradient(90deg, #5415AC 0%, #ED4F22 50%, #FD0685 100%)',
+      },
     },
   },
   plugins: [],
