@@ -5,7 +5,7 @@
 Este projeto contém dois componentes custom widgets desenvolvidos para Flutter/FlutterFlow:
 
 1. **ICPConfigWidget** - Formulário de configuração de ICP (Ideal Customer Profile)
-2. **LeadsTableWidget** - Tabela profissional de gerenciamento de leads
+2. **MeusLeadsPage** - Página completa de gerenciamento de leads
 
 ---
 
@@ -170,91 +170,144 @@ const url = 'https://seu-n8n.com/webhook/processar-icp';
 
 ---
 
-## 📊 2. Leads Table Widget
+## 📊 2. Meus Leads Page
 
 ### Descrição
-Tabela profissional e completa para gerenciamento de leads com todas as funcionalidades necessárias.
+Página completa e integrada para gerenciamento de leads. Não é um widget separado - representa toda a interface da página "Meus Leads".
 
 ### Arquivo
-`lib/custom_code/widgets/leads_table_widget.dart`
+`lib/custom_code/widgets/meus_leads_page.dart`
 
 ### Características
 
-#### ✨ Funcionalidades Principais
-- **Visualização Dual:**
-  - Desktop/Tablet: DataTable completa
-  - Mobile: Cards adaptados
+#### ✨ Layout Integrado
+A página inclui tudo em um único componente:
 
-- **Filtros e Busca:**
+**Header:**
+- Botão voltar (canto superior esquerdo)
+- Título "Meus Leads"
+- Botão "Exportar" (outline)
+- Botão "Novo Lead" (primário, laranja)
+
+**Busca e Filtros:**
+- Barra de busca por nome, email ou cidade
+- Filtros horizontais em pills:
+  - Todos (selecionado por padrão)
+  - Novo
+  - Em Contato
+  - Conversando
+  - Qualificado
+- Contador de leads encontrados com ícone
+
+**Tabela/Lista:**
+- Desktop/Tablet: DataTable completa com scroll horizontal
+- Mobile: Cards estilizados
+
+#### ✨ Funcionalidades
+
+- **Busca em Tempo Real:**
   - Busca por nome, email, telefone, empresa
-  - Filtro por status (Novo, Contatado, Qualificado, etc.)
-  - Filtro por período (Hoje, Semana, Mês)
+  - Atualização automática ao digitar
+
+- **Filtros de Status:**
+  - Pills clicáveis com destaque visual
+  - Filtro "Todos" mostra todos os leads
+  - Filtros específicos por status
 
 - **Ordenação:**
   - Clique nas colunas para ordenar
   - Indicador visual de coluna ordenada
-  - Ordem ascendente/descendente
+  - Alterna entre ascendente/descendente
 
-- **Seleção e Bulk Actions:**
-  - Checkbox para seleção múltipla
-  - Seleção individual ou "Selecionar Todos"
-  - Excluir múltiplos leads de uma vez
+- **Seleção Múltipla:**
+  - Checkbox em cada lead
+  - "Selecionar Todos" no header da tabela
+  - Barra de bulk actions aparece quando há seleção
+
+- **Bulk Actions:**
+  - Excluir múltiplos leads
+  - Limpar seleção
   - Contador de selecionados
 
+- **Ações Individuais:**
+  - Visualizar detalhes (via callback)
+  - Alterar status (modal)
+  - Excluir lead (confirmação)
+
 - **Paginação:**
-  - 10 leads por página (configurável)
+  - 10 leads por página
   - Navegação entre páginas
   - Indicador de página atual
-
-- **Ações Individuais:**
-  - Visualizar detalhes
-  - Alterar status
-  - Excluir lead
+  - Números de página clicáveis (desktop)
 
 - **Exportação:**
-  - Exportar para CSV
-  - Exportar selecionados ou todos filtrados
+  - Exportar selecionados ou todos
+  - Formato CSV
+  - Toast de confirmação
+
+- **Empty State:**
+  - Ícone e mensagem quando não há leads
+  - Botão "Configurar ICP"
+  - Chamada para ação clara
 
 #### 🎨 UI/UX
-- ✅ Design profissional e moderno
+- ✅ Design consistente com o layout do sistema
 - ✅ Badges coloridos por status
-- ✅ Score visual com estrela
-- ✅ Responsividade total
+- ✅ Score visual com estrela e cores
+- ✅ Responsividade total (mobile, tablet, desktop)
 - ✅ Dark/light mode automático
 - ✅ Toasts no canto superior direito
 - ✅ Confirmações para ações destrutivas
 - ✅ Loading states
-- ✅ Empty states (quando aplicável)
+- ✅ Feedback visual em todas interações
+- ✅ Transições suaves
 
 ### Uso no FlutterFlow
 
+**No FlutterFlow, crie uma página e adicione este widget ocupando toda a área:**
+
 ```dart
-LeadsTableWidget(
+MeusLeadsPage(
   width: double.infinity,
   height: double.infinity,
+
+  // Callback ao clicar em "Novo Lead"
+  onNovoLead: () async {
+    // Navegar para formulário de novo lead ou abrir modal
+    context.pushNamed('NovoLead');
+  },
+
+  // Callback ao clicar em "Configurar ICP" (no empty state)
+  onConfigICP: () async {
+    // Navegar para configuração de ICP
+    context.pushNamed('ConfigurarICP');
+  },
+
+  // Callback ao clicar em um lead
   onLeadClick: (leadId) async {
     // Navegar para detalhes do lead
-    context.pushNamed('LeadDetails', extra: {'id': leadId});
+    context.pushNamed(
+      'LeadDetails',
+      extra: {'id': leadId},
+    );
   },
 )
 ```
 
 ### Status de Leads
 
-| Status | Cor | Significado |
-|--------|-----|-------------|
-| Novo | Azul (#007AFF) | Lead recém-chegado |
-| Contatado | Roxo (#5856D6) | Primeiro contato feito |
-| Qualificado | Laranja (#FF9500) | Lead qualificado |
-| Proposta | Amarelo (#FFCC00) | Proposta enviada |
-| Ganho | Verde (#34C759) | Lead convertido |
-| Perdido | Vermelho (#FF3B30) | Lead perdido |
+| Status | Cor | Hex |
+|--------|-----|-----|
+| Novo | Azul | #007AFF |
+| Em Contato | Roxo | #5856D6 |
+| Conversando | Laranja | #FF9500 |
+| Qualificado | Verde | #34C759 |
 
 ### Score de Qualidade
 
-- 🟢 **80-100**: Alta qualidade
-- 🟠 **50-79**: Média qualidade
-- 🔴 **0-49**: Baixa qualidade
+- 🟢 **80-100**: Alta qualidade (Verde #34C759)
+- 🟠 **50-79**: Média qualidade (Laranja #FF9500)
+- 🔴 **0-49**: Baixa qualidade (Vermelho #FF3B30)
 
 ### Estrutura do Banco (Supabase)
 
@@ -286,6 +339,12 @@ CREATE TABLE leads (
 );
 ```
 
+### Status Aceitos
+- 'Novo'
+- 'Em Contato'
+- 'Conversando'
+- 'Qualificado'
+
 ---
 
 ## 🚀 Como Usar no FlutterFlow
@@ -295,7 +354,9 @@ CREATE TABLE leads (
 1. Abra seu projeto no FlutterFlow
 2. Vá em **Custom Code** → **Widgets**
 3. Clique em **Add Widget**
-4. Cole o código de cada widget
+4. Cole o código de cada widget:
+   - `icp_config_widget.dart`
+   - `meus_leads_page.dart`
 5. Configure as dependências:
    - `google_fonts: ^6.1.0`
    - `http: ^1.1.0`
@@ -313,23 +374,30 @@ CREATE TABLE leads (
 3. Atualize a URL no código (icp_config_widget.dart, linha 246)
 4. Adicione a API Key
 
-### 4. Adicionar à Página
+### 4. Criar Páginas no FlutterFlow
 
-**Para ICP Config:**
+#### Página: Configurar ICP
 ```
 1. Crie uma nova página "ConfigurarICP"
 2. Adicione um Custom Widget
 3. Selecione "ICPConfigWidget"
-4. Configure width/height como desejado
+4. Configure:
+   - width: infinityWidth
+   - height: infinityHeight
+   - onComplete: Navegar de volta ou mostrar sucesso
 ```
 
-**Para Tabela de Leads:**
+#### Página: Meus Leads
 ```
-1. Crie uma página "MeusLeads"
+1. Crie uma nova página "MeusLeads"
 2. Adicione um Custom Widget
-3. Selecione "LeadsTableWidget"
-4. Configure width/height como desejado
-5. Configure o callback onLeadClick se necessário
+3. Selecione "MeusLeadsPage"
+4. Configure:
+   - width: infinityWidth
+   - height: infinityHeight
+   - onNovoLead: Navegar para formulário de novo lead
+   - onConfigICP: Navegar para configuração ICP
+   - onLeadClick: Navegar para detalhes do lead
 ```
 
 ---
@@ -343,13 +411,13 @@ Ambos os componentes detectam automaticamente o tema do FlutterFlow:
 ```dart
 final theme = FlutterFlowTheme.of(context);
 // Usa automaticamente:
-// - theme.primary
+// - theme.primary (cor primária do app)
 // - theme.secondary
 // - theme.primaryBackground
 // - theme.secondaryBackground
 // - theme.primaryText
 // - theme.secondaryText
-// - theme.alternate
+// - theme.alternate (bordas)
 ```
 
 ### Breakpoints
@@ -358,7 +426,10 @@ final theme = FlutterFlowTheme.of(context);
 - **Tablet**: 768px - 1024px
 - **Desktop**: > 1024px
 
-Os componentes se adaptam automaticamente.
+Os componentes se adaptam automaticamente:
+- Mobile: Interface compacta, cards, navegação simplificada
+- Tablet: Interface intermediária
+- Desktop: Interface completa com todos os recursos
 
 ---
 
@@ -378,7 +449,7 @@ const url = 'https://SEU-N8N.com/webhook/processar-icp';
 
 ### Ajustes Opcionais
 
-**Leads por página** (`leads_table_widget.dart`, linha 49):
+**Leads por página** (`meus_leads_page.dart`, linha 49):
 ```dart
 int _rowsPerPage = 10; // Altere para 15, 20, etc.
 ```
@@ -390,27 +461,81 @@ int _rowsPerPage = 10; // Altere para 15, 20, etc.
 
 ---
 
+## 🎨 Design System
+
+### Cores Padrão do Sistema
+
+**Status:**
+- Novo: #007AFF (Azul iOS)
+- Em Contato: #5856D6 (Roxo iOS)
+- Conversando: #FF9500 (Laranja iOS)
+- Qualificado: #34C759 (Verde iOS)
+
+**Feedback:**
+- Sucesso: #34C759 (Verde)
+- Erro: #FF3B30 (Vermelho)
+- Aviso: #FF9500 (Laranja)
+- Info: #007AFF (Azul)
+
+**Scores:**
+- Alto (80-100): #34C759 (Verde)
+- Médio (50-79): #FF9500 (Laranja)
+- Baixo (0-49): #FF3B30 (Vermelho)
+
+### Tipografia
+
+Usa Google Fonts - Inter:
+- Títulos: Inter 18-22px, Weight 700
+- Subtítulos: Inter 14-16px, Weight 600
+- Corpo: Inter 13-14px, Weight 400-500
+- Caption: Inter 12-13px, Weight 400
+
+### Espaçamentos
+
+- Padding pequeno: 8-12px
+- Padding médio: 16-20px
+- Padding grande: 24-32px
+- Border radius: 8-12px (cards), 20px (pills)
+
+---
+
 ## 🐛 Troubleshooting
 
 ### Problema: "Erro ao carregar dados"
 - ✅ Verifique a conexão com Supabase
 - ✅ Confirme que as tabelas existem
 - ✅ Verifique as RLS policies
+- ✅ Verifique se o usuário está autenticado
 
 ### Problema: "Erro ao salvar configuração"
 - ✅ Verifique os campos obrigatórios
 - ✅ Confirme o company_id
-- ✅ Veja os logs no console
+- ✅ Veja os logs no console (debugPrint)
+- ✅ Verifique permissões de insert no Supabase
 
 ### Problema: "ICP salvo, mas erro no processamento"
 - ✅ Verifique a URL do webhook
 - ✅ Confirme que a API Key está correta
-- ✅ Teste o endpoint manualmente
+- ✅ Teste o endpoint manualmente (Postman/Insomnia)
+- ✅ Verifique os logs do N8N
 
 ### Problema: Tema não muda
 - ✅ Certifique-se de usar FlutterFlowTheme.of(context)
 - ✅ Reinicie o app após mudar o tema
 - ✅ Verifique se o tema está configurado no FlutterFlow
+- ✅ Teste em hot restart, não hot reload
+
+### Problema: Layout quebrado no mobile
+- ✅ Verifique se width e height estão como infinity
+- ✅ Teste em diferentes tamanhos de tela
+- ✅ Verifique o console para erros de overflow
+- ✅ Use o device preview do FlutterFlow
+
+### Problema: Filtros não funcionam
+- ✅ Verifique se os status no banco correspondem aos filtros
+- ✅ Status são case-sensitive: "Novo", não "novo"
+- ✅ Veja os logs no console
+- ✅ Teste a query diretamente no Supabase
 
 ---
 
@@ -421,31 +546,72 @@ int _rowsPerPage = 10; // Altere para 15, 20, etc.
 - [ ] Configurar RLS policies
 - [ ] Criar workflow no N8N
 - [ ] Adicionar widgets no FlutterFlow
-- [ ] Instalar dependências
+- [ ] Instalar dependências (google_fonts, http)
 
 ### Configuração
 - [ ] Atualizar URL do webhook
 - [ ] Adicionar API Key
 - [ ] Testar conexão com Supabase
-- [ ] Testar webhook
+- [ ] Testar webhook com dados de exemplo
+- [ ] Configurar theme no FlutterFlow
+
+### Páginas
+- [ ] Criar página "ConfigurarICP"
+- [ ] Criar página "MeusLeads"
+- [ ] Adicionar navegação entre páginas
+- [ ] Configurar callbacks
+- [ ] Adicionar à navegação principal
+
+### Testes
+- [ ] Testar ICP em mobile
+- [ ] Testar ICP em desktop
+- [ ] Testar leads em mobile
+- [ ] Testar leads em desktop
+- [ ] Testar dark mode
+- [ ] Testar light mode
+- [ ] Testar com dados reais
+- [ ] Testar todos os filtros
+- [ ] Testar ordenação
+- [ ] Testar paginação
+- [ ] Testar exportação
+- [ ] Testar exclusão
 
 ### Deploy
-- [ ] Criar páginas no FlutterFlow
-- [ ] Adicionar navigation
-- [ ] Testar em mobile
-- [ ] Testar em desktop
-- [ ] Testar dark/light mode
-- [ ] Testar com dados reais
+- [ ] Revisar todas as URLs
+- [ ] Revisar API Keys
+- [ ] Testar em produção
+- [ ] Monitorar erros
+- [ ] Coletar feedback dos usuários
 
 ---
 
-## 📞 Suporte
+## 🎯 Fluxo de Uso Recomendado
 
-Para dúvidas ou problemas:
-1. Verifique os logs do console (debugPrint)
-2. Teste as queries do Supabase diretamente
-3. Valide o payload do webhook
-4. Revise este README
+1. **Primeiro Acesso:**
+   - Usuário vai para "Meus Leads"
+   - Vê empty state
+   - Clica em "Configurar ICP"
+   - Preenche as 5 etapas
+   - ICP é ativado
+
+2. **Recebendo Leads:**
+   - N8N processa o ICP
+   - Leads são encontrados e inseridos no banco
+   - Usuário vê notificação (se ativado)
+   - Leads aparecem na página "Meus Leads"
+
+3. **Gerenciando Leads:**
+   - Usuário busca leads
+   - Filtra por status
+   - Clica para ver detalhes
+   - Altera status conforme progresso
+   - Exporta quando necessário
+
+4. **Manutenção:**
+   - Usuário pode voltar e editar o ICP
+   - Configuração é atualizada
+   - N8N processa novos critérios
+   - Novos leads chegam conforme novo ICP
 
 ---
 
@@ -453,16 +619,64 @@ Para dúvidas ou problemas:
 
 Depois de implementar estes componentes, você pode:
 
-1. **Adicionar mais filtros** na tabela de leads
-2. **Criar dashboard** com métricas de leads
-3. **Implementar notificações** push quando novos leads chegarem
-4. **Adicionar histórico** de alterações de status
-5. **Criar relatórios** de conversão
-6. **Integrar com CRM** externo
+1. **Adicionar Dashboard** com métricas e gráficos
+2. **Criar página de detalhes** do lead completa
+3. **Implementar notificações push** quando novos leads chegarem
+4. **Adicionar timeline** de interações com cada lead
+5. **Criar relatórios** de conversão e ROI
+6. **Integrar com CRM** externo (RD Station, HubSpot, etc)
+7. **Adicionar tags** personalizadas nos leads
+8. **Implementar funil visual** de vendas
+9. **Criar automações** de follow-up
+10. **Adicionar chat/mensagens** integrados
 
 ---
 
-**Versão:** 1.0
+## 📞 Suporte
+
+Para dúvidas ou problemas:
+1. Verifique os logs do console (`debugPrint`)
+2. Teste as queries do Supabase diretamente no SQL Editor
+3. Valide o payload do webhook no N8N
+4. Revise este README
+5. Verifique os commits no GitHub para ver o código completo
+
+---
+
+## 📦 Estrutura de Arquivos
+
+```
+nexio/
+├── lib/
+│   └── custom_code/
+│       └── widgets/
+│           ├── index.dart              # Exporta todos os widgets
+│           ├── icp_config_widget.dart  # Widget de configuração ICP
+│           └── meus_leads_page.dart    # Página completa de leads
+├── COMPONENTES_README.md               # Esta documentação
+└── README.md                           # README do projeto
+```
+
+---
+
+**Versão:** 2.0
 **Data:** 25/11/2025
 **Desenvolvido para:** Nexio - Sistema de Gerenciamento de Leads
 **Stack:** Flutter + FlutterFlow + Supabase + N8N
+**Autor:** Claude Code Assistant
+
+---
+
+## 🔄 Changelog
+
+### v2.0 - 25/11/2025
+- ✅ Refatorado: Integrada tabela na página principal
+- ✅ Removido: Widget separado de tabela
+- ✅ Adicionado: MeusLeadsPage como componente único
+- ✅ Melhorado: Layout consistente com o design do sistema
+- ✅ Adicionado: Callbacks para ações customizadas
+
+### v1.0 - 25/11/2025
+- ✅ Release inicial
+- ✅ ICPConfigWidget completo
+- ✅ LeadsTableWidget separado (descontinuado)
