@@ -12,7 +12,6 @@ import 'package:flutter/material.dart';
 // DO NOT REMOVE OR MODIFY THE CODE ABOVE!
 
 import 'package:google_fonts/google_fonts.dart';
-import 'dart:convert';
 
 class MeusLeadsPage extends StatefulWidget {
   const MeusLeadsPage({
@@ -42,11 +41,12 @@ class _MeusLeadsPageState extends State<MeusLeadsPage> {
   String? _userId;
 
   int _currentPage = 0;
-  int _rowsPerPage = 10;
+  final int _rowsPerPage = 10;
   int get _totalPages => (_filteredLeads.length / _rowsPerPage).ceil();
   int get _totalLeads => _filteredLeads.length;
   int get _startIndex => _currentPage * _rowsPerPage + 1;
-  int get _endIndex => ((_currentPage + 1) * _rowsPerPage).clamp(0, _totalLeads);
+  int get _endIndex =>
+      ((_currentPage + 1) * _rowsPerPage).clamp(0, _totalLeads);
 
   final _searchCtrl = TextEditingController();
   String _statusFilter = 'Todos';
@@ -85,7 +85,7 @@ class _MeusLeadsPageState extends State<MeusLeadsPage> {
         }
       }
     } catch (e) {
-      debugPrint('❌ Init error: $e');
+      debugPrint('Init error: $e');
       _showToast('Erro ao carregar dados', true);
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -110,7 +110,7 @@ class _MeusLeadsPageState extends State<MeusLeadsPage> {
         });
       }
     } catch (e) {
-      debugPrint('❌ Load leads error: $e');
+      debugPrint('Load leads error: $e');
       _showToast('Erro ao carregar leads', true);
       if (mounted) setState(() => _isLoading = false);
     }
@@ -134,7 +134,8 @@ class _MeusLeadsPageState extends State<MeusLeadsPage> {
     }
 
     if (_statusFilter != 'Todos') {
-      filtered = filtered.where((lead) => lead['status'] == _statusFilter).toList();
+      filtered =
+          filtered.where((lead) => lead['status'] == _statusFilter).toList();
     }
 
     if (_prioridadeFilter != 'Todas') {
@@ -184,14 +185,14 @@ class _MeusLeadsPageState extends State<MeusLeadsPage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text('Cancelar'),
+            child: const Text('Cancelar'),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFFF3B30),
             ),
-            child: Text('Excluir'),
+            child: const Text('Excluir'),
           ),
         ],
       ),
@@ -203,7 +204,7 @@ class _MeusLeadsPageState extends State<MeusLeadsPage> {
         _showToast('Lead excluído com sucesso', false);
         await _loadLeads();
       } catch (e) {
-        debugPrint('❌ Delete error: $e');
+        debugPrint('Delete error: $e');
         _showToast('Erro ao excluir lead', true);
       }
     }
@@ -226,17 +227,18 @@ class _MeusLeadsPageState extends State<MeusLeadsPage> {
                 opacity: v,
                 child: Container(
                   constraints: const BoxConstraints(maxWidth: 400),
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                   decoration: BoxDecoration(
                     color: error
                         ? const Color(0xFFFF3B30)
                         : const Color(0xFF34C759),
                     borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
+                    boxShadow: const [
                       BoxShadow(
                         color: Colors.black26,
                         blurRadius: 10,
-                        offset: const Offset(0, 4),
+                        offset: Offset(0, 4),
                       ),
                     ],
                   ),
@@ -244,7 +246,9 @@ class _MeusLeadsPageState extends State<MeusLeadsPage> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(
-                        error ? Icons.error_outline : Icons.check_circle_outline,
+                        error
+                            ? Icons.error_outline
+                            : Icons.check_circle_outline,
                         color: Colors.white,
                         size: 22,
                       ),
@@ -288,7 +292,8 @@ class _MeusLeadsPageState extends State<MeusLeadsPage> {
           _buildFiltrosAvancados(theme, mobile),
           Expanded(
             child: _isLoading
-                ? Center(child: CircularProgressIndicator(color: theme.primary))
+                ? Center(
+                    child: CircularProgressIndicator(color: theme.primary))
                 : _filteredLeads.isEmpty
                     ? _buildEmptyState(theme)
                     : mobile
@@ -438,7 +443,8 @@ class _MeusLeadsPageState extends State<MeusLeadsPage> {
               children: [
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 12),
-                  child: Icon(Icons.search, color: theme.secondaryText, size: 20),
+                  child:
+                      Icon(Icons.search, color: theme.secondaryText, size: 20),
                 ),
                 Expanded(
                   child: TextField(
@@ -453,7 +459,8 @@ class _MeusLeadsPageState extends State<MeusLeadsPage> {
                         color: theme.secondaryText,
                       ),
                       border: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                      contentPadding:
+                          const EdgeInsets.symmetric(vertical: 12),
                     ),
                   ),
                 ),
@@ -504,12 +511,14 @@ class _MeusLeadsPageState extends State<MeusLeadsPage> {
             children: [
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 12),
-                child: Icon(Icons.search, color: theme.secondaryText, size: 20),
+                child:
+                    Icon(Icons.search, color: theme.secondaryText, size: 20),
               ),
               Expanded(
                 child: TextField(
                   controller: _searchCtrl,
-                  style: GoogleFonts.inter(fontSize: 14, color: theme.primaryText),
+                  style:
+                      GoogleFonts.inter(fontSize: 14, color: theme.primaryText),
                   decoration: InputDecoration(
                     hintText: 'Buscar',
                     hintStyle: GoogleFonts.inter(color: theme.secondaryText),
@@ -576,7 +585,8 @@ class _MeusLeadsPageState extends State<MeusLeadsPage> {
         icon: Icon(Icons.arrow_drop_down, color: theme.primaryText),
         style: GoogleFonts.inter(fontSize: 14, color: theme.primaryText),
         dropdownColor: theme.secondaryBackground,
-        hint: Text(label, style: GoogleFonts.inter(color: theme.secondaryText)),
+        hint:
+            Text(label, style: GoogleFonts.inter(color: theme.secondaryText)),
         items: items.map((item) {
           return DropdownMenuItem(
             value: item,
@@ -620,8 +630,8 @@ class _MeusLeadsPageState extends State<MeusLeadsPage> {
       scrollDirection: Axis.horizontal,
       child: SingleChildScrollView(
         child: DataTable(
-          headingRowColor: MaterialStateProperty.all(theme.primaryBackground),
-          dataRowColor: MaterialStateProperty.all(theme.secondaryBackground),
+          headingRowColor: WidgetStateProperty.all(theme.primaryBackground),
+          dataRowColor: WidgetStateProperty.all(theme.secondaryBackground),
           headingRowHeight: 48,
           dataRowHeight: 64,
           horizontalMargin: 24,
@@ -731,14 +741,50 @@ class _MeusLeadsPageState extends State<MeusLeadsPage> {
           rows: currentLeads.map((lead) {
             return DataRow(
               cells: [
-                DataCell(_buildCellText(lead['company'] ?? '-', theme)),
-                DataCell(_buildCellText(lead['segmento'] ?? 'Saúde/Medicina', theme)),
+                DataCell(Text(
+                  lead['company'] ?? '-',
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    color: theme.primaryText,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                )),
+                DataCell(Text(
+                  lead['segmento'] ?? 'Saúde/Medicina',
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    color: theme.primaryText,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                )),
                 DataCell(_buildStatusBadge(lead['status'] ?? 'Lead novo', theme)),
                 DataCell(_buildWebsiteLink(lead['website'], theme)),
-                DataCell(_buildCellText(lead['phone'] ?? '-', theme)),
-                DataCell(_buildPrioridadeBadge(lead['prioridade'] ?? 'Média', theme)),
-                DataCell(_buildCellText(lead['importacao'] ?? 'PEG', theme)),
-                DataCell(_buildCellText(lead['observacoes'] ?? '-', theme)),
+                DataCell(Text(
+                  lead['phone'] ?? '-',
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    color: theme.primaryText,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                )),
+                DataCell(_buildPrioridadeBadge(
+                    lead['prioridade'] ?? 'Média', theme)),
+                DataCell(Text(
+                  lead['importacao'] ?? 'PEG',
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    color: theme.primaryText,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                )),
+                DataCell(Text(
+                  lead['observacoes'] ?? '-',
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    color: theme.primaryText,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                )),
                 DataCell(_buildAcoes(lead['id'], theme)),
               ],
             );
@@ -784,7 +830,27 @@ class _MeusLeadsPageState extends State<MeusLeadsPage> {
                 ],
               ),
               const SizedBox(height: 12),
-              _buildMobileRow('Segmento', lead['segmento'] ?? '-', theme),
+              Row(
+                children: [
+                  Text(
+                    'Segmento: ',
+                    style: GoogleFonts.inter(
+                      fontSize: 13,
+                      color: theme.secondaryText,
+                    ),
+                  ),
+                  Expanded(
+                    child: Text(
+                      lead['segmento'] ?? '-',
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        color: theme.primaryText,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
               const SizedBox(height: 8),
               Row(
                 children: [
@@ -800,9 +866,49 @@ class _MeusLeadsPageState extends State<MeusLeadsPage> {
               ),
               const SizedBox(height: 8),
               if (lead['website'] != null)
-                _buildMobileRow('Website', lead['website'], theme),
+                Row(
+                  children: [
+                    Text(
+                      'Website: ',
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        color: theme.secondaryText,
+                      ),
+                    ),
+                    Expanded(
+                      child: Text(
+                        lead['website'],
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          color: theme.primaryText,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
               const SizedBox(height: 8),
-              _buildMobileRow('Telefone', lead['phone'] ?? '-', theme),
+              Row(
+                children: [
+                  Text(
+                    'Telefone: ',
+                    style: GoogleFonts.inter(
+                      fontSize: 13,
+                      color: theme.secondaryText,
+                    ),
+                  ),
+                  Expanded(
+                    child: Text(
+                      lead['phone'] ?? '-',
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        color: theme.primaryText,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
               const SizedBox(height: 8),
               Row(
                 children: [
@@ -820,17 +926,6 @@ class _MeusLeadsPageState extends State<MeusLeadsPage> {
           ),
         );
       },
-    );
-  }
-
-  Widget _buildCellText(String text, FlutterFlowTheme theme) {
-    return Text(
-      text,
-      style: GoogleFonts.inter(
-        fontSize: 14,
-        color: theme.primaryText,
-      ),
-      overflow: TextOverflow.ellipsis,
     );
   }
 
@@ -959,30 +1054,6 @@ class _MeusLeadsPageState extends State<MeusLeadsPage> {
     );
   }
 
-  Widget _buildMobileRow(String label, String value, FlutterFlowTheme theme) {
-    return Row(
-      children: [
-        Text(
-          '$label: ',
-          style: GoogleFonts.inter(
-            fontSize: 13,
-            color: theme.secondaryText,
-          ),
-        ),
-        Expanded(
-          child: Text(
-            value,
-            style: GoogleFonts.inter(
-              fontSize: 13,
-              color: theme.primaryText,
-            ),
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
-      ],
-    );
-  }
-
   Widget _buildPagination(FlutterFlowTheme theme, bool mobile) {
     return Container(
       padding: EdgeInsets.symmetric(
@@ -1023,7 +1094,8 @@ class _MeusLeadsPageState extends State<MeusLeadsPage> {
               if (!mobile) ...[
                 const SizedBox(width: 8),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
                     color: const Color(0xFFFF9500),
                     borderRadius: BorderRadius.circular(6),
