@@ -14,26 +14,30 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'dart:convert';
 
-/// Widget de Tabela de Leads
-/// Tabela profissional com paginação, filtros, ordenação e exportação
+/// Página Completa: Meus Leads
+/// Inclui header, filtros, busca e tabela de leads integrados
 
-class LeadsTableWidget extends StatefulWidget {
-  const LeadsTableWidget({
+class MeusLeadsPage extends StatefulWidget {
+  const MeusLeadsPage({
     super.key,
     this.width,
     this.height,
+    this.onNovoLead,
+    this.onConfigICP,
     this.onLeadClick,
   });
 
   final double? width;
   final double? height;
+  final Future<dynamic> Function()? onNovoLead;
+  final Future<dynamic> Function()? onConfigICP;
   final Future<dynamic> Function(int leadId)? onLeadClick;
 
   @override
-  State<LeadsTableWidget> createState() => _LeadsTableWidgetState();
+  State<MeusLeadsPage> createState() => _MeusLeadsPageState();
 }
 
-class _LeadsTableWidgetState extends State<LeadsTableWidget> {
+class _MeusLeadsPageState extends State<MeusLeadsPage> {
   // ========== State Management ==========
   List<Map<String, dynamic>> _leads = [];
   List<Map<String, dynamic>> _filteredLeads = [];
@@ -53,7 +57,6 @@ class _LeadsTableWidgetState extends State<LeadsTableWidget> {
   // Filtros
   final _searchCtrl = TextEditingController();
   String _statusFilter = 'Todos';
-  String _dateFilter = 'Todos';
 
   // Selection
   final Set<int> _selectedLeads = {};
@@ -150,29 +153,9 @@ class _LeadsTableWidgetState extends State<LeadsTableWidget> {
       filtered = filtered.where((lead) => lead['status'] == _statusFilter).toList();
     }
 
-    // Date filter
-    if (_dateFilter != 'Todos') {
-      final now = DateTime.now();
-      filtered = filtered.where((lead) {
-        final createdAt = DateTime.parse(lead['created_at']);
-        switch (_dateFilter) {
-          case 'Hoje':
-            return createdAt.day == now.day &&
-                createdAt.month == now.month &&
-                createdAt.year == now.year;
-          case 'Última Semana':
-            return now.difference(createdAt).inDays <= 7;
-          case 'Último Mês':
-            return now.difference(createdAt).inDays <= 30;
-          default:
-            return true;
-        }
-      }).toList();
-    }
-
     setState(() {
       _filteredLeads = filtered;
-      _currentPage = 0; // Reset to first page
+      _currentPage = 0;
       _selectedLeads.clear();
     });
   }
@@ -231,8 +214,9 @@ class _LeadsTableWidgetState extends State<LeadsTableWidget> {
 
   Future<void> _exportToCSV() async {
     try {
-      final leadsToExport =
-          _selectedLeads.isEmpty ? _filteredLeads : _filteredLeads.where((l) => _selectedLeads.contains(l['id'])).toList();
+      final leadsToExport = _selectedLeads.isEmpty
+          ? _filteredLeads
+          : _filteredLeads.where((l) => _selectedLeads.contains(l['id'])).toList();
 
       final csv = StringBuffer();
       csv.writeln('Nome,Email,Telefone,Empresa,Status,Score,Data');
@@ -249,8 +233,6 @@ class _LeadsTableWidgetState extends State<LeadsTableWidget> {
         );
       }
 
-      // Here you would normally trigger a file download
-      // For FlutterFlow, you might want to copy to clipboard or use a download package
       _showToast('${leadsToExport.length} leads exportados!', false);
     } catch (e) {
       debugPrint('❌ Export error: $e');
@@ -264,9 +246,14 @@ class _LeadsTableWidgetState extends State<LeadsTableWidget> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('Confirmar Exclusão'),
+        backgroundColor: FlutterFlowTheme.of(context).secondaryBackground,
+        title: Text(
+          'Confirmar Exclusão',
+          style: GoogleFonts.inter(color: FlutterFlowTheme.of(context).primaryText),
+        ),
         content: Text(
           'Deseja realmente excluir ${_selectedLeads.length} lead(s)?',
+          style: GoogleFonts.inter(color: FlutterFlowTheme.of(context).secondaryText),
         ),
         actions: [
           TextButton(
@@ -286,7 +273,10 @@ class _LeadsTableWidgetState extends State<LeadsTableWidget> {
 
     if (confirmed == true) {
       try {
-        await SupaFlow.client.from('leads').delete().in_('id', _selectedLeads.toList());
+        await SupaFlow.client
+            .from('leads')
+            .delete()
+            .in_('id', _selectedLeads.toList());
 
         _showToast('${_selectedLeads.length} lead(s) excluído(s)', false);
         _selectedLeads.clear();
@@ -383,17 +373,6 @@ class _LeadsTableWidgetState extends State<LeadsTableWidget> {
     final mobile = size.width < 768;
     final tablet = size.width >= 768 && size.width < 1024;
 
-    if (_isLoading) {
-      return Container(
-        width: widget.width,
-        height: widget.height,
-        color: theme.primaryBackground,
-        child: Center(
-          child: CircularProgressIndicator(color: theme.primary),
-        ),
-      );
-    }
-
     return Container(
       width: widget.width,
       height: widget.height,
@@ -401,12 +380,19 @@ class _LeadsTableWidgetState extends State<LeadsTableWidget> {
       child: Column(
         children: [
           _header(theme, mobile),
-          _filters(theme, mobile),
+          _searchAndFilters(theme, mobile),
           if (_selectedLeads.isNotEmpty) _bulkActions(theme, mobile),
           Expanded(
-            child: mobile ? _mobileView(theme) : _tableView(theme, tablet),
+            child: _isLoading
+                ? Center(child: CircularProgressIndicator(color: theme.primary))
+                : _filteredLeads.isEmpty
+                    ? _emptyState(theme)
+                    : mobile
+                        ? _mobileView(theme)
+                        : _tableView(theme, tablet),
           ),
-          _pagination(theme, mobile),
+          if (!_isLoading && _filteredLeads.isNotEmpty)
+            _pagination(theme, mobile),
         ],
       ),
     );
@@ -427,74 +413,130 @@ class _LeadsTableWidgetState extends State<LeadsTableWidget> {
         ],
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Meus Leads',
-                style: GoogleFonts.inter(
-                  fontSize: mobile ? 18 : 22,
-                  fontWeight: FontWeight.w700,
+          // Botão voltar
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () => Navigator.of(context).pop(),
+              borderRadius: BorderRadius.circular(8),
+              child: Padding(
+                padding: const EdgeInsets.all(8),
+                child: Icon(
+                  Icons.arrow_back,
                   color: theme.primaryText,
+                  size: mobile ? 20 : 24,
                 ),
               ),
-              Text(
-                '${_filteredLeads.length} lead(s) encontrado(s)',
-                style: GoogleFonts.inter(
-                  fontSize: mobile ? 12 : 13,
-                  color: theme.secondaryText,
-                ),
-              ),
-            ],
+            ),
           ),
-          Row(
-            children: [
-              if (!mobile) ...[
-                _actionButton(
-                  Icons.refresh,
-                  'Atualizar',
-                  () => _loadLeads(),
-                  theme,
+          const SizedBox(width: 12),
+
+          // Título
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Meus Leads',
+                  style: GoogleFonts.inter(
+                    fontSize: mobile ? 18 : 22,
+                    fontWeight: FontWeight.w700,
+                    color: theme.primaryText,
+                  ),
                 ),
-                const SizedBox(width: 8),
+                Text(
+                  'Gerencie seus leads',
+                  style: GoogleFonts.inter(
+                    fontSize: mobile ? 12 : 13,
+                    color: theme.secondaryText,
+                  ),
+                ),
               ],
-              _actionButton(
-                Icons.download,
-                mobile ? '' : 'Exportar',
-                _exportToCSV,
-                theme,
-                primary: true,
-              ),
-            ],
+            ),
+          ),
+
+          // Botões de ação
+          if (!mobile) ...[
+            _headerButton(
+              Icons.download,
+              'Exportar',
+              _exportToCSV,
+              theme,
+              outlined: true,
+            ),
+            const SizedBox(width: 8),
+          ],
+          _headerButton(
+            Icons.add,
+            mobile ? '' : 'Novo Lead',
+            () async {
+              if (widget.onNovoLead != null) {
+                await widget.onNovoLead!();
+                await _loadLeads();
+              }
+            },
+            theme,
+            primary: true,
           ),
         ],
       ),
     );
   }
 
-  Widget _filters(FlutterFlowTheme theme, bool mobile) {
+  Widget _headerButton(
+    IconData icon,
+    String label,
+    VoidCallback onPressed,
+    FlutterFlowTheme theme, {
+    bool primary = false,
+    bool outlined = false,
+  }) {
+    return ElevatedButton.icon(
+      onPressed: onPressed,
+      icon: Icon(icon, size: 18),
+      label: label.isNotEmpty ? Text(label) : const SizedBox(),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: primary
+            ? theme.primary
+            : outlined
+                ? Colors.transparent
+                : theme.primaryBackground,
+        foregroundColor: primary
+            ? Colors.white
+            : outlined
+                ? theme.primaryText
+                : theme.primaryText,
+        elevation: 0,
+        padding: EdgeInsets.symmetric(
+          horizontal: label.isEmpty ? 12 : 16,
+          vertical: 10,
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+          side: outlined
+              ? BorderSide(color: theme.alternate, width: 2)
+              : BorderSide.none,
+        ),
+      ),
+    );
+  }
+
+  Widget _searchAndFilters(FlutterFlowTheme theme, bool mobile) {
     return Container(
-      padding: EdgeInsets.all(mobile ? 12 : 16),
+      padding: EdgeInsets.all(mobile ? 12 : 20),
       decoration: BoxDecoration(
         color: theme.secondaryBackground,
         border: Border(bottom: BorderSide(color: theme.alternate)),
       ),
-      child: mobile ? _mobileFilters(theme) : _desktopFilters(theme),
-    );
-  }
-
-  Widget _desktopFilters(FlutterFlowTheme theme) {
-    return Row(
-      children: [
-        Expanded(
-          flex: 2,
-          child: TextField(
+      child: Column(
+        children: [
+          // Barra de busca
+          TextField(
             controller: _searchCtrl,
             style: GoogleFonts.inter(fontSize: 14, color: theme.primaryText),
             decoration: InputDecoration(
-              hintText: 'Buscar por nome, email, telefone...',
+              hintText: 'Buscar por nome, email ou cidade...',
               hintStyle: GoogleFonts.inter(color: theme.secondaryText),
               prefixIcon: Icon(Icons.search, color: theme.secondaryText),
               filled: true,
@@ -503,117 +545,83 @@ class _LeadsTableWidgetState extends State<LeadsTableWidget> {
                 borderRadius: BorderRadius.circular(8),
                 borderSide: BorderSide.none,
               ),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            ),
-          ),
-        ),
-        const SizedBox(width: 12),
-        _filterDropdown(
-          'Status',
-          _statusFilter,
-          ['Todos', 'Novo', 'Contatado', 'Qualificado', 'Proposta', 'Ganho', 'Perdido'],
-          (v) => setState(() {
-            _statusFilter = v!;
-            _applyFilters();
-          }),
-          theme,
-        ),
-        const SizedBox(width: 12),
-        _filterDropdown(
-          'Período',
-          _dateFilter,
-          ['Todos', 'Hoje', 'Última Semana', 'Último Mês'],
-          (v) => setState(() {
-            _dateFilter = v!;
-            _applyFilters();
-          }),
-          theme,
-        ),
-      ],
-    );
-  }
-
-  Widget _mobileFilters(FlutterFlowTheme theme) {
-    return Column(
-      children: [
-        TextField(
-          controller: _searchCtrl,
-          style: GoogleFonts.inter(fontSize: 14, color: theme.primaryText),
-          decoration: InputDecoration(
-            hintText: 'Buscar...',
-            hintStyle: GoogleFonts.inter(color: theme.secondaryText),
-            prefixIcon: Icon(Icons.search, color: theme.secondaryText),
-            filled: true,
-            fillColor: theme.primaryBackground,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide.none,
-            ),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          ),
-        ),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            Expanded(
-              child: _filterDropdown(
-                null,
-                _statusFilter,
-                ['Todos', 'Novo', 'Contatado', 'Qualificado', 'Proposta', 'Ganho', 'Perdido'],
-                (v) => setState(() {
-                  _statusFilter = v!;
-                  _applyFilters();
-                }),
-                theme,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 12,
               ),
             ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: _filterDropdown(
-                null,
-                _dateFilter,
-                ['Todos', 'Hoje', 'Semana', 'Mês'],
-                (v) => setState(() {
-                  _dateFilter = v!;
-                  _applyFilters();
-                }),
-                theme,
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
+          ),
+          const SizedBox(height: 12),
 
-  Widget _filterDropdown(
-    String? label,
-    String value,
-    List<String> items,
-    Function(String?) onChanged,
-    FlutterFlowTheme theme,
-  ) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      decoration: BoxDecoration(
-        color: theme.primaryBackground,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: theme.alternate),
-      ),
-      child: DropdownButton<String>(
-        value: value,
-        isExpanded: true,
-        underline: const SizedBox(),
-        icon: Icon(Icons.arrow_drop_down, color: theme.primaryText),
-        style: GoogleFonts.inter(fontSize: 14, color: theme.primaryText),
-        dropdownColor: theme.secondaryBackground,
-        items: items.map((item) {
-          return DropdownMenuItem(
-            value: item,
-            child: Text(label != null && item == value ? '$label: $item' : item),
-          );
-        }).toList(),
-        onChanged: onChanged,
+          // Filtros de status
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                'Todos',
+                'Novo',
+                'Em Contato',
+                'Conversando',
+                'Qualificado'
+              ].map((status) {
+                final isSelected = _statusFilter == status;
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () => setState(() {
+                        _statusFilter = status;
+                        _applyFilters();
+                      }),
+                      borderRadius: BorderRadius.circular(20),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? theme.primary
+                              : theme.primaryBackground,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: isSelected ? theme.primary : theme.alternate,
+                            width: isSelected ? 0 : 1,
+                          ),
+                        ),
+                        child: Text(
+                          status,
+                          style: GoogleFonts.inter(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: isSelected ? Colors.white : theme.primaryText,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+
+          // Contador de leads
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Icon(Icons.people, size: 16, color: theme.secondaryText),
+              const SizedBox(width: 6),
+              Text(
+                '${_filteredLeads.length} lead(s) encontrado(s)',
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  color: theme.secondaryText,
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -623,7 +631,9 @@ class _LeadsTableWidgetState extends State<LeadsTableWidget> {
       padding: EdgeInsets.all(mobile ? 12 : 16),
       decoration: BoxDecoration(
         color: theme.primary.withOpacity(0.1),
-        border: Border(bottom: BorderSide(color: theme.primary.withOpacity(0.3))),
+        border: Border(
+          bottom: BorderSide(color: theme.primary.withOpacity(0.3)),
+        ),
       ),
       child: Row(
         children: [
@@ -653,6 +663,56 @@ class _LeadsTableWidgetState extends State<LeadsTableWidget> {
             label: Text(mobile ? '' : 'Limpar'),
             style: TextButton.styleFrom(
               foregroundColor: theme.secondaryText,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _emptyState(FlutterFlowTheme theme) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.people_outline,
+            size: 80,
+            color: theme.secondaryText,
+          ),
+          const SizedBox(height: 20),
+          Text(
+            'Nenhum lead encontrado',
+            style: GoogleFonts.inter(
+              fontSize: 20,
+              fontWeight: FontWeight.w600,
+              color: theme.primaryText,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Configure seu ICP para começar a receber leads',
+            style: GoogleFonts.inter(
+              fontSize: 14,
+              color: theme.secondaryText,
+            ),
+          ),
+          const SizedBox(height: 24),
+          ElevatedButton.icon(
+            onPressed: () async {
+              if (widget.onConfigICP != null) {
+                await widget.onConfigICP!();
+              }
+            },
+            icon: const Icon(Icons.settings, size: 18),
+            label: Text('Configurar ICP'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: theme.primary,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
             ),
           ),
         ],
@@ -808,15 +868,21 @@ class _LeadsTableWidgetState extends State<LeadsTableWidget> {
                       ],
                     ),
                     const SizedBox(height: 12),
-                    _mobileRow(Icons.email, lead['email'] ?? '-', theme),
-                    const SizedBox(height: 8),
-                    _mobileRow(Icons.phone, lead['phone'] ?? '-', theme),
+                    if (lead['email'] != null)
+                      _mobileRow(Icons.email, lead['email'], theme),
+                    if (lead['phone'] != null) ...[
+                      const SizedBox(height: 8),
+                      _mobileRow(Icons.phone, lead['phone'], theme),
+                    ],
                     const SizedBox(height: 8),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        _mobileRow(Icons.calendar_today,
-                            _formatDate(lead['created_at']), theme),
+                        _mobileRow(
+                          Icons.calendar_today,
+                          _formatDate(lead['created_at']),
+                          theme,
+                        ),
                         _scoreBadge(lead['score'] ?? 0, theme),
                       ],
                     ),
@@ -871,29 +937,26 @@ class _LeadsTableWidgetState extends State<LeadsTableWidget> {
   Widget _statusBadge(String status, FlutterFlowTheme theme) {
     final colors = {
       'Novo': const Color(0xFF007AFF),
-      'Contatado': const Color(0xFF5856D6),
-      'Qualificado': const Color(0xFFFF9500),
-      'Proposta': const Color(0xFFFFCC00),
-      'Ganho': const Color(0xFF34C759),
-      'Perdido': const Color(0xFFFF3B30),
+      'Em Contato': const Color(0xFF5856D6),
+      'Conversando': const Color(0xFFFF9500),
+      'Qualificado': const Color(0xFF34C759),
     };
+
+    final color = colors[status] ?? theme.primary;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: (colors[status] ?? theme.primary).withOpacity(0.1),
+        color: color.withOpacity(0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: colors[status] ?? theme.primary,
-          width: 1,
-        ),
+        border: Border.all(color: color, width: 1),
       ),
       child: Text(
         status,
         style: GoogleFonts.inter(
           fontSize: 12,
           fontWeight: FontWeight.w600,
-          color: colors[status] ?? theme.primary,
+          color: color,
         ),
       ),
     );
@@ -992,35 +1055,59 @@ class _LeadsTableWidgetState extends State<LeadsTableWidget> {
     );
   }
 
-  void _showStatusDialog(int leadId, String currentStatus, FlutterFlowTheme theme) {
+  void _showStatusDialog(
+    int leadId,
+    String currentStatus,
+    FlutterFlowTheme theme,
+  ) {
     showDialog(
       context: context,
       builder: (ctx) {
-        return AlertDialog(
-          title: Text('Alterar Status'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              'Novo',
-              'Contatado',
-              'Qualificado',
-              'Proposta',
-              'Ganho',
-              'Perdido'
-            ].map((status) {
-              return ListTile(
-                title: Text(status),
-                leading: Radio<String>(
-                  value: status,
-                  groupValue: currentStatus,
-                  onChanged: (v) {
-                    Navigator.pop(ctx);
-                    _updateStatus(leadId, v!);
-                  },
+        String selectedStatus = currentStatus;
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              backgroundColor: theme.secondaryBackground,
+              title: Text(
+                'Alterar Status',
+                style: GoogleFonts.inter(color: theme.primaryText),
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: ['Novo', 'Em Contato', 'Conversando', 'Qualificado']
+                    .map((status) {
+                  return RadioListTile<String>(
+                    title: Text(
+                      status,
+                      style: GoogleFonts.inter(color: theme.primaryText),
+                    ),
+                    value: status,
+                    groupValue: selectedStatus,
+                    activeColor: theme.primary,
+                    onChanged: (v) {
+                      setDialogState(() => selectedStatus = v!);
+                    },
+                  );
+                }).toList(),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: Text('Cancelar'),
                 ),
-              );
-            }).toList(),
-          ),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    _updateStatus(leadId, selectedStatus);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: theme.primary,
+                  ),
+                  child: Text('Salvar'),
+                ),
+              ],
+            );
+          },
         );
       },
     );
@@ -1066,13 +1153,10 @@ class _LeadsTableWidgetState extends State<LeadsTableWidget> {
             children: [
               IconButton(
                 icon: Icon(Icons.chevron_left, color: theme.primaryText),
-                onPressed: _currentPage > 0
-                    ? () => setState(() => _currentPage--)
-                    : null,
+                onPressed:
+                    _currentPage > 0 ? () => setState(() => _currentPage--) : null,
               ),
-              if (!mobile) ...[
-                ..._buildPageNumbers(theme),
-              ],
+              if (!mobile) ..._buildPageNumbers(theme),
               IconButton(
                 icon: Icon(Icons.chevron_right, color: theme.primaryText),
                 onPressed: _currentPage < _totalPages - 1
@@ -1118,33 +1202,6 @@ class _LeadsTableWidgetState extends State<LeadsTableWidget> {
       );
     }
     return pages;
-  }
-
-  Widget _actionButton(
-    IconData icon,
-    String label,
-    VoidCallback onPressed,
-    FlutterFlowTheme theme, {
-    bool primary = false,
-  }) {
-    return ElevatedButton.icon(
-      onPressed: onPressed,
-      icon: Icon(icon, size: 18),
-      label: label.isNotEmpty ? Text(label) : const SizedBox(),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: primary ? theme.primary : theme.primaryBackground,
-        foregroundColor: primary ? Colors.white : theme.primaryText,
-        elevation: 0,
-        padding: EdgeInsets.symmetric(
-          horizontal: label.isEmpty ? 12 : 16,
-          vertical: 10,
-        ),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-          side: primary ? BorderSide.none : BorderSide(color: theme.alternate),
-        ),
-      ),
-    );
   }
 
   String _formatDate(dynamic date) {
