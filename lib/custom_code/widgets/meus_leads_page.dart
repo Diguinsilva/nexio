@@ -14,9 +14,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'dart:convert';
 
-/// Planilha de Leads - Página Completa
-/// Layout consistente com o design do sistema vend.AI
-
 class MeusLeadsPage extends StatefulWidget {
   const MeusLeadsPage({
     super.key,
@@ -38,14 +35,12 @@ class MeusLeadsPage extends StatefulWidget {
 }
 
 class _MeusLeadsPageState extends State<MeusLeadsPage> {
-  // ========== State Management ==========
   List<Map<String, dynamic>> _leads = [];
   List<Map<String, dynamic>> _filteredLeads = [];
   bool _isLoading = true;
   int? _companyId;
   String? _userId;
 
-  // Paginação
   int _currentPage = 0;
   int _rowsPerPage = 10;
   int get _totalPages => (_filteredLeads.length / _rowsPerPage).ceil();
@@ -53,7 +48,6 @@ class _MeusLeadsPageState extends State<MeusLeadsPage> {
   int get _startIndex => _currentPage * _rowsPerPage + 1;
   int get _endIndex => ((_currentPage + 1) * _rowsPerPage).clamp(0, _totalLeads);
 
-  // Filtros
   final _searchCtrl = TextEditingController();
   String _statusFilter = 'Todos';
   String _prioridadeFilter = 'Todas';
@@ -74,7 +68,6 @@ class _MeusLeadsPageState extends State<MeusLeadsPage> {
     super.dispose();
   }
 
-  // ========== Initialization ==========
   Future<void> _init() async {
     try {
       final user = SupaFlow.client.auth.currentUser;
@@ -104,7 +97,7 @@ class _MeusLeadsPageState extends State<MeusLeadsPage> {
       setState(() => _isLoading = true);
 
       final res = await SupaFlow.client
-          .from('leads')
+          .from('agropro_leads')
           .select()
           .eq('company_id', _companyId!)
           .order('created_at', ascending: false);
@@ -123,12 +116,10 @@ class _MeusLeadsPageState extends State<MeusLeadsPage> {
     }
   }
 
-  // ========== Filtros ==========
   void _applyFilters() {
     final search = _searchCtrl.text.toLowerCase();
     List<Map<String, dynamic>> filtered = List.from(_leads);
 
-    // Search
     if (search.isNotEmpty) {
       filtered = filtered.where((lead) {
         final empresa = (lead['company'] ?? '').toString().toLowerCase();
@@ -142,12 +133,10 @@ class _MeusLeadsPageState extends State<MeusLeadsPage> {
       }).toList();
     }
 
-    // Status
     if (_statusFilter != 'Todos') {
       filtered = filtered.where((lead) => lead['status'] == _statusFilter).toList();
     }
 
-    // Prioridade
     if (_prioridadeFilter != 'Todas') {
       filtered = filtered
           .where((lead) => lead['prioridade'] == _prioridadeFilter)
@@ -175,7 +164,6 @@ class _MeusLeadsPageState extends State<MeusLeadsPage> {
     return _filteredLeads.sublist(start, end);
   }
 
-  // ========== Actions ==========
   Future<void> _deleteLead(int leadId) async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -211,7 +199,7 @@ class _MeusLeadsPageState extends State<MeusLeadsPage> {
 
     if (confirmed == true) {
       try {
-        await SupaFlow.client.from('leads').delete().eq('id', leadId);
+        await SupaFlow.client.from('agropro_leads').delete().eq('id', leadId);
         _showToast('Lead excluído com sucesso', false);
         await _loadLeads();
       } catch (e) {
@@ -221,7 +209,6 @@ class _MeusLeadsPageState extends State<MeusLeadsPage> {
     }
   }
 
-  // ========== UI Feedback ==========
   void _showToast(String msg, bool error) {
     _toast?.remove();
     _toast = OverlayEntry(
@@ -285,7 +272,6 @@ class _MeusLeadsPageState extends State<MeusLeadsPage> {
     Future.delayed(const Duration(seconds: 3), () => _toast?.remove());
   }
 
-  // ========== Build Methods ==========
   @override
   Widget build(BuildContext context) {
     final theme = FlutterFlowTheme.of(context);
@@ -298,24 +284,25 @@ class _MeusLeadsPageState extends State<MeusLeadsPage> {
       color: theme.primaryBackground,
       child: Column(
         children: [
-          _header(theme, mobile),
-          _filtrosAvancados(theme, mobile),
+          _buildHeader(theme, mobile),
+          _buildFiltrosAvancados(theme, mobile),
           Expanded(
             child: _isLoading
                 ? Center(child: CircularProgressIndicator(color: theme.primary))
                 : _filteredLeads.isEmpty
-                    ? _emptyState(theme)
+                    ? _buildEmptyState(theme)
                     : mobile
-                        ? _mobileView(theme)
-                        : _tableView(theme),
+                        ? _buildMobileView(theme)
+                        : _buildTableView(theme),
           ),
-          if (!_isLoading && _filteredLeads.isNotEmpty) _pagination(theme, mobile),
+          if (!_isLoading && _filteredLeads.isNotEmpty)
+            _buildPagination(theme, mobile),
         ],
       ),
     );
   }
 
-  Widget _header(FlutterFlowTheme theme, bool mobile) {
+  Widget _buildHeader(FlutterFlowTheme theme, bool mobile) {
     return Container(
       padding: EdgeInsets.symmetric(
         horizontal: mobile ? 20 : 40,
@@ -328,7 +315,6 @@ class _MeusLeadsPageState extends State<MeusLeadsPage> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          // Título e subtítulo
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -363,8 +349,6 @@ class _MeusLeadsPageState extends State<MeusLeadsPage> {
               ),
             ],
           ),
-
-          // Botão Adicionar Lead
           ElevatedButton.icon(
             onPressed: () async {
               if (widget.onAdicionarLead != null) {
@@ -381,7 +365,7 @@ class _MeusLeadsPageState extends State<MeusLeadsPage> {
               ),
             ),
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFFF9500), // Laranja
+              backgroundColor: const Color(0xFFFF9500),
               foregroundColor: Colors.white,
               padding: EdgeInsets.symmetric(
                 horizontal: mobile ? 16 : 20,
@@ -398,7 +382,7 @@ class _MeusLeadsPageState extends State<MeusLeadsPage> {
     );
   }
 
-  Widget _filtrosAvancados(FlutterFlowTheme theme, bool mobile) {
+  Widget _buildFiltrosAvancados(FlutterFlowTheme theme, bool mobile) {
     return Container(
       padding: EdgeInsets.all(mobile ? 16 : 24),
       decoration: BoxDecoration(
@@ -433,18 +417,15 @@ class _MeusLeadsPageState extends State<MeusLeadsPage> {
             ],
           ),
           const SizedBox(height: 16),
-
-          // Filtros
-          mobile ? _filtrosMobile(theme) : _filtrosDesktop(theme),
+          mobile ? _buildFiltrosMobile(theme) : _buildFiltrosDesktop(theme),
         ],
       ),
     );
   }
 
-  Widget _filtrosDesktop(FlutterFlowTheme theme) {
+  Widget _buildFiltrosDesktop(FlutterFlowTheme theme) {
     return Row(
       children: [
-        // Buscar
         Expanded(
           flex: 2,
           child: Container(
@@ -472,9 +453,7 @@ class _MeusLeadsPageState extends State<MeusLeadsPage> {
                         color: theme.secondaryText,
                       ),
                       border: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(
-                        vertical: 12,
-                      ),
+                      contentPadding: const EdgeInsets.symmetric(vertical: 12),
                     ),
                   ),
                 ),
@@ -483,8 +462,6 @@ class _MeusLeadsPageState extends State<MeusLeadsPage> {
           ),
         ),
         const SizedBox(width: 16),
-
-        // Status
         Expanded(
           child: _buildDropdown(
             'Status',
@@ -498,8 +475,6 @@ class _MeusLeadsPageState extends State<MeusLeadsPage> {
           ),
         ),
         const SizedBox(width: 16),
-
-        // Prioridade
         Expanded(
           child: _buildDropdown(
             'Prioridade',
@@ -516,7 +491,7 @@ class _MeusLeadsPageState extends State<MeusLeadsPage> {
     );
   }
 
-  Widget _filtrosMobile(FlutterFlowTheme theme) {
+  Widget _buildFiltrosMobile(FlutterFlowTheme theme) {
     return Column(
       children: [
         Container(
@@ -613,7 +588,7 @@ class _MeusLeadsPageState extends State<MeusLeadsPage> {
     );
   }
 
-  Widget _emptyState(FlutterFlowTheme theme) {
+  Widget _buildEmptyState(FlutterFlowTheme theme) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -638,7 +613,7 @@ class _MeusLeadsPageState extends State<MeusLeadsPage> {
     );
   }
 
-  Widget _tableView(FlutterFlowTheme theme) {
+  Widget _buildTableView(FlutterFlowTheme theme) {
     final currentLeads = _getCurrentPageLeads();
 
     return SingleChildScrollView(
@@ -653,28 +628,118 @@ class _MeusLeadsPageState extends State<MeusLeadsPage> {
           columnSpacing: 32,
           dividerThickness: 1,
           columns: [
-            _dataColumn('NOME DA EMPRESA', theme),
-            _dataColumn('SEGMENTO', theme),
-            _dataColumn('STATUS', theme),
-            _dataColumn('WEBSITE', theme),
-            _dataColumn('TELEFONE', theme),
-            _dataColumn('PRIORIDADE', theme),
-            _dataColumn('IMPORTAÇÃO', theme),
-            _dataColumn('OBSERVAÇÕES', theme),
-            _dataColumn('AÇÕES', theme),
+            DataColumn(
+              label: Text(
+                'NOME DA EMPRESA',
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: theme.secondaryText,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ),
+            DataColumn(
+              label: Text(
+                'SEGMENTO',
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: theme.secondaryText,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ),
+            DataColumn(
+              label: Text(
+                'STATUS',
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: theme.secondaryText,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ),
+            DataColumn(
+              label: Text(
+                'WEBSITE',
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: theme.secondaryText,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ),
+            DataColumn(
+              label: Text(
+                'TELEFONE',
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: theme.secondaryText,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ),
+            DataColumn(
+              label: Text(
+                'PRIORIDADE',
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: theme.secondaryText,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ),
+            DataColumn(
+              label: Text(
+                'IMPORTAÇÃO',
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: theme.secondaryText,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ),
+            DataColumn(
+              label: Text(
+                'OBSERVAÇÕES',
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: theme.secondaryText,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ),
+            DataColumn(
+              label: Text(
+                'AÇÕES',
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: theme.secondaryText,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ),
           ],
           rows: currentLeads.map((lead) {
             return DataRow(
               cells: [
-                DataCell(_cellText(lead['company'] ?? '-', theme)),
-                DataCell(_cellText(lead['segmento'] ?? 'Saúde/Medicina', theme)),
-                DataCell(_statusBadge(lead['status'] ?? 'Lead novo', theme)),
-                DataCell(_websiteLink(lead['website'], theme)),
-                DataCell(_cellText(lead['phone'] ?? '-', theme)),
-                DataCell(_prioridadeBadge(lead['prioridade'] ?? 'Média', theme)),
-                DataCell(_cellText(lead['importacao'] ?? 'PEG', theme)),
-                DataCell(_cellText(lead['observacoes'] ?? '-', theme)),
-                DataCell(_acoes(lead['id'], theme)),
+                DataCell(_buildCellText(lead['company'] ?? '-', theme)),
+                DataCell(_buildCellText(lead['segmento'] ?? 'Saúde/Medicina', theme)),
+                DataCell(_buildStatusBadge(lead['status'] ?? 'Lead novo', theme)),
+                DataCell(_buildWebsiteLink(lead['website'], theme)),
+                DataCell(_buildCellText(lead['phone'] ?? '-', theme)),
+                DataCell(_buildPrioridadeBadge(lead['prioridade'] ?? 'Média', theme)),
+                DataCell(_buildCellText(lead['importacao'] ?? 'PEG', theme)),
+                DataCell(_buildCellText(lead['observacoes'] ?? '-', theme)),
+                DataCell(_buildAcoes(lead['id'], theme)),
               ],
             );
           }).toList(),
@@ -683,7 +748,7 @@ class _MeusLeadsPageState extends State<MeusLeadsPage> {
     );
   }
 
-  Widget _mobileView(FlutterFlowTheme theme) {
+  Widget _buildMobileView(FlutterFlowTheme theme) {
     final currentLeads = _getCurrentPageLeads();
 
     return ListView.builder(
@@ -715,11 +780,11 @@ class _MeusLeadsPageState extends State<MeusLeadsPage> {
                       ),
                     ),
                   ),
-                  _acoes(lead['id'], theme),
+                  _buildAcoes(lead['id'], theme),
                 ],
               ),
               const SizedBox(height: 12),
-              _mobileRow('Segmento', lead['segmento'] ?? '-', theme),
+              _buildMobileRow('Segmento', lead['segmento'] ?? '-', theme),
               const SizedBox(height: 8),
               Row(
                 children: [
@@ -730,14 +795,14 @@ class _MeusLeadsPageState extends State<MeusLeadsPage> {
                       color: theme.secondaryText,
                     ),
                   ),
-                  _statusBadge(lead['status'] ?? 'Lead novo', theme),
+                  _buildStatusBadge(lead['status'] ?? 'Lead novo', theme),
                 ],
               ),
               const SizedBox(height: 8),
               if (lead['website'] != null)
-                _mobileRow('Website', lead['website'], theme),
+                _buildMobileRow('Website', lead['website'], theme),
               const SizedBox(height: 8),
-              _mobileRow('Telefone', lead['phone'] ?? '-', theme),
+              _buildMobileRow('Telefone', lead['phone'] ?? '-', theme),
               const SizedBox(height: 8),
               Row(
                 children: [
@@ -748,7 +813,7 @@ class _MeusLeadsPageState extends State<MeusLeadsPage> {
                       color: theme.secondaryText,
                     ),
                   ),
-                  _prioridadeBadge(lead['prioridade'] ?? 'Média', theme),
+                  _buildPrioridadeBadge(lead['prioridade'] ?? 'Média', theme),
                 ],
               ),
             ],
@@ -758,21 +823,7 @@ class _MeusLeadsPageState extends State<MeusLeadsPage> {
     );
   }
 
-  DataColumn _dataColumn(String label, FlutterFlowTheme theme) {
-    return DataColumn(
-      label: Text(
-        label,
-        style: GoogleFonts.inter(
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
-          color: theme.secondaryText,
-          letterSpacing: 0.5,
-        ),
-      ),
-    );
-  }
-
-  Widget _cellText(String text, FlutterFlowTheme theme) {
+  Widget _buildCellText(String text, FlutterFlowTheme theme) {
     return Text(
       text,
       style: GoogleFonts.inter(
@@ -783,20 +834,20 @@ class _MeusLeadsPageState extends State<MeusLeadsPage> {
     );
   }
 
-  Widget _statusBadge(String status, FlutterFlowTheme theme) {
+  Widget _buildStatusBadge(String status, FlutterFlowTheme theme) {
     Color color;
     switch (status) {
       case 'Lead novo':
-        color = const Color(0xFF34C759); // Verde
+        color = const Color(0xFF34C759);
         break;
       case 'Em contato':
-        color = const Color(0xFF007AFF); // Azul
+        color = const Color(0xFF007AFF);
         break;
       case 'Qualificado':
-        color = const Color(0xFFFF9500); // Laranja
+        color = const Color(0xFFFF9500);
         break;
       case 'Perdido':
-        color = const Color(0xFFFF3B30); // Vermelho
+        color = const Color(0xFFFF3B30);
         break;
       default:
         color = theme.secondaryText;
@@ -819,21 +870,21 @@ class _MeusLeadsPageState extends State<MeusLeadsPage> {
     );
   }
 
-  Widget _prioridadeBadge(String prioridade, FlutterFlowTheme theme) {
+  Widget _buildPrioridadeBadge(String prioridade, FlutterFlowTheme theme) {
     Color color;
     IconData icon;
 
     switch (prioridade) {
       case 'Alta':
-        color = const Color(0xFFFF3B30); // Vermelho
+        color = const Color(0xFFFF3B30);
         icon = Icons.circle;
         break;
       case 'Média':
-        color = const Color(0xFFFF9500); // Laranja
+        color = const Color(0xFFFF9500);
         icon = Icons.circle;
         break;
       case 'Baixa':
-        color = const Color(0xFF34C759); // Verde
+        color = const Color(0xFF34C759);
         icon = Icons.circle;
         break;
       default:
@@ -858,7 +909,7 @@ class _MeusLeadsPageState extends State<MeusLeadsPage> {
     );
   }
 
-  Widget _websiteLink(String? website, FlutterFlowTheme theme) {
+  Widget _buildWebsiteLink(String? website, FlutterFlowTheme theme) {
     if (website == null || website.isEmpty || website == '-') {
       return Text(
         'Não tem',
@@ -880,7 +931,7 @@ class _MeusLeadsPageState extends State<MeusLeadsPage> {
     );
   }
 
-  Widget _acoes(int leadId, FlutterFlowTheme theme) {
+  Widget _buildAcoes(int leadId, FlutterFlowTheme theme) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -908,7 +959,7 @@ class _MeusLeadsPageState extends State<MeusLeadsPage> {
     );
   }
 
-  Widget _mobileRow(String label, String value, FlutterFlowTheme theme) {
+  Widget _buildMobileRow(String label, String value, FlutterFlowTheme theme) {
     return Row(
       children: [
         Text(
@@ -932,7 +983,7 @@ class _MeusLeadsPageState extends State<MeusLeadsPage> {
     );
   }
 
-  Widget _pagination(FlutterFlowTheme theme, bool mobile) {
+  Widget _buildPagination(FlutterFlowTheme theme, bool mobile) {
     return Container(
       padding: EdgeInsets.symmetric(
         horizontal: mobile ? 16 : 24,
@@ -955,13 +1006,17 @@ class _MeusLeadsPageState extends State<MeusLeadsPage> {
           Row(
             children: [
               TextButton(
-                onPressed: _currentPage > 0 ? () => setState(() => _currentPage--) : null,
+                onPressed: _currentPage > 0
+                    ? () => setState(() => _currentPage--)
+                    : null,
                 child: Text(
                   'Anterior',
                   style: GoogleFonts.inter(
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
-                    color: _currentPage > 0 ? theme.primaryText : theme.secondaryText,
+                    color: _currentPage > 0
+                        ? theme.primaryText
+                        : theme.secondaryText,
                   ),
                 ),
               ),
