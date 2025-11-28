@@ -320,46 +320,11 @@ class _ICPConfigWidgetState extends State<ICPConfigWidget> {
   }
 
   Future<void> _exportICP() async {
-    final t = FlutterFlowTheme.of(context);
     await showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (_) {
-        return Dialog(
-          backgroundColor: t.secondaryBackground,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                CircularProgressIndicator(color: t.primary),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Extraindo ICP desejado', style: t.titleSmall),
-                      const SizedBox(height: 4),
-                      Text('Aguarde enquanto finaliza.', style: t.labelSmall),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
+      builder: (context) => _ExportICPModal(),
     );
-    try {
-      await Future.delayed(const Duration(seconds: 2));
-      Navigator.of(context, rootNavigator: true).pop();
-      _showToastTopRight('ICP exportado com sucesso', true);
-    } catch (e) {
-      Navigator.of(context, rootNavigator: true).pop();
-      _showToastTopRight('Erro ao exportar ICP: $e', false);
-    }
   }
 
   void _exportCSV() {
@@ -466,6 +431,7 @@ class _ICPConfigWidgetState extends State<ICPConfigWidget> {
   Widget _dashboardSection(int leadsHoje) {
     final t = FlutterFlowTheme.of(context);
     return Container(
+      height: 440,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: t.secondaryBackground,
@@ -645,7 +611,8 @@ class _ICPConfigWidgetState extends State<ICPConfigWidget> {
           style: ElevatedButton.styleFrom(
             backgroundColor: t.primary,
             foregroundColor: t.secondaryBackground,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            minimumSize: const Size(0, 44),
           ),
           child: const Text('Exportar CSV'),
         ),
@@ -1185,6 +1152,7 @@ class _ICPConfigWidgetState extends State<ICPConfigWidget> {
     } catch (_) {}
 
     Widget icpPanel = Container(
+      height: 440,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: t.secondaryBackground,
@@ -1207,7 +1175,11 @@ class _ICPConfigWidgetState extends State<ICPConfigWidget> {
             ],
           ),
           const SizedBox(height: 16),
-          stepContent(),
+          Expanded(
+            child: SingleChildScrollView(
+              child: stepContent(),
+            ),
+          ),
           const SizedBox(height: 16),
           Row(
             children: [
@@ -1318,6 +1290,301 @@ class _ICPConfigWidgetState extends State<ICPConfigWidget> {
       }
     }
     return 'R\$ ${buf.toString()},$decPart';
+  }
+}
+
+class _ExportICPModal extends StatefulWidget {
+  @override
+  State<_ExportICPModal> createState() => _ExportICPModalState();
+}
+
+class _ExportICPModalState extends State<_ExportICPModal> {
+  String state = 'loading'; // loading, success, error
+  int leadsCount = 0;
+  String errorMessage = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _processExport();
+  }
+
+  Future<void> _processExport() async {
+    try {
+      await Future.delayed(const Duration(seconds: 3));
+      // Simula processamento de leads
+      leadsCount = 47; // Em produção, isso viria da API
+      if (mounted) {
+        setState(() => state = 'success');
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          state = 'error';
+          errorMessage = 'Não foi possível conectar ao servidor. Tente novamente.';
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = FlutterFlowTheme.of(context);
+
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      child: Container(
+        width: 450,
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: t.secondaryBackground,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.3),
+              blurRadius: 20,
+              spreadRadius: 5,
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (state == 'loading') ..._buildLoadingState(t),
+            if (state == 'success') ..._buildSuccessState(t),
+            if (state == 'error') ..._buildErrorState(t),
+          ],
+        ),
+      ),
+    );
+  }
+
+  List<Widget> _buildLoadingState(FlutterFlowTheme t) {
+    return [
+      Container(
+        width: 80,
+        height: 80,
+        decoration: BoxDecoration(
+          color: t.primary.withOpacity(0.1),
+          shape: BoxShape.circle,
+        ),
+        child: Center(
+          child: SizedBox(
+            width: 40,
+            height: 40,
+            child: CircularProgressIndicator(
+              color: t.primary,
+              strokeWidth: 3,
+            ),
+          ),
+        ),
+      ),
+      const SizedBox(height: 24),
+      Text(
+        'Extraindo Leads...',
+        style: t.titleLarge.override(
+          fontFamily: t.titleLargeFamily,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      const SizedBox(height: 12),
+      Text(
+        'Nossa IA está analisando o mercado para encontrar os melhores contatos para o seu ICP.',
+        textAlign: TextAlign.center,
+        style: t.bodyMedium.override(
+          fontFamily: t.bodyMediumFamily,
+          color: t.secondaryText,
+        ),
+      ),
+      const SizedBox(height: 16),
+      Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: t.primary.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(
+                color: t.primary,
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              'Processando dados em tempo real',
+              style: t.labelSmall.override(
+                fontFamily: t.labelSmallFamily,
+                color: t.primary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+      const SizedBox(height: 24),
+      TextButton(
+        onPressed: () => Navigator.of(context).pop(),
+        child: Text(
+          'Cancelar',
+          style: t.bodyMedium.override(
+            fontFamily: t.bodyMediumFamily,
+            color: t.secondaryText,
+          ),
+        ),
+      ),
+    ];
+  }
+
+  List<Widget> _buildSuccessState(FlutterFlowTheme t) {
+    return [
+      Container(
+        width: 80,
+        height: 80,
+        decoration: BoxDecoration(
+          color: const Color(0xFF22C55E).withOpacity(0.1),
+          shape: BoxShape.circle,
+        ),
+        child: const Icon(
+          Icons.check_circle,
+          color: Color(0xFF22C55E),
+          size: 50,
+        ),
+      ),
+      const SizedBox(height: 24),
+      Text(
+        'Leads Extraídos com Sucesso!',
+        style: t.titleLarge.override(
+          fontFamily: t.titleLargeFamily,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      const SizedBox(height: 12),
+      Text(
+        'Encontramos $leadsCount leads qualificados que correspondem ao seu perfil de cliente ideal.',
+        textAlign: TextAlign.center,
+        style: t.bodyMedium.override(
+          fontFamily: t.bodyMediumFamily,
+          color: t.secondaryText,
+        ),
+      ),
+      const SizedBox(height: 24),
+      Row(
+        children: [
+          Expanded(
+            child: OutlinedButton(
+              onPressed: () => Navigator.of(context).pop(),
+              style: OutlinedButton.styleFrom(
+                side: BorderSide(color: t.alternate),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: Text(
+                'Fechar',
+                style: t.bodyMedium,
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: t.primary,
+                foregroundColor: t.secondaryBackground,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: const Text('Ver Leads'),
+            ),
+          ),
+        ],
+      ),
+    ];
+  }
+
+  List<Widget> _buildErrorState(FlutterFlowTheme t) {
+    return [
+      Container(
+        width: 80,
+        height: 80,
+        decoration: BoxDecoration(
+          color: const Color(0xFFEF4444).withOpacity(0.1),
+          shape: BoxShape.circle,
+        ),
+        child: const Icon(
+          Icons.error_outline,
+          color: Color(0xFFEF4444),
+          size: 50,
+        ),
+      ),
+      const SizedBox(height: 24),
+      Text(
+        'Erro ao Extrair Leads',
+        style: t.titleLarge.override(
+          fontFamily: t.titleLargeFamily,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      const SizedBox(height: 12),
+      Text(
+        errorMessage,
+        textAlign: TextAlign.center,
+        style: t.bodyMedium.override(
+          fontFamily: t.bodyMediumFamily,
+          color: t.secondaryText,
+        ),
+      ),
+      const SizedBox(height: 24),
+      Row(
+        children: [
+          Expanded(
+            child: OutlinedButton(
+              onPressed: () => Navigator.of(context).pop(),
+              style: OutlinedButton.styleFrom(
+                side: BorderSide(color: t.alternate),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: Text(
+                'Fechar',
+                style: t.bodyMedium,
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: ElevatedButton(
+              onPressed: () {
+                setState(() {
+                  state = 'loading';
+                  _processExport();
+                });
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: t.primary,
+                foregroundColor: t.secondaryBackground,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: const Text('Tentar Novamente'),
+            ),
+          ),
+        ],
+      ),
+    ];
   }
 }
 
