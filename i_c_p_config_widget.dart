@@ -551,8 +551,8 @@ class _ICPConfigWidgetState extends State<ICPConfigWidget> {
     final percentUsed = planMonthlyLimit > 0 ? (leadsRecebidosMes / planMonthlyLimit * 100).clamp(0, 100) : 0.0;
 
     return Container(
-      height: 440,
-      padding: const EdgeInsets.all(16),
+      height: 700,
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: t.secondaryBackground,
         borderRadius: BorderRadius.circular(12),
@@ -590,10 +590,10 @@ class _ICPConfigWidgetState extends State<ICPConfigWidget> {
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           // Indicador de progresso do plano
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: cardBg,
               borderRadius: BorderRadius.circular(8),
@@ -630,22 +630,22 @@ class _ICPConfigWidgetState extends State<ICPConfigWidget> {
               ],
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           Expanded(
             child: Column(
               children: [
                 Row(
                   children: [
                     Expanded(child: _metricCardBox('Leads Hoje', leadsHoje.toString(), Icons.show_chart, 'Recebidos hoje')),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 16),
                     Expanded(child: _metricCardBox('Total de Contatos', leads.length.toString(), Icons.call, 'Leads importados')),
                   ],
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
                 Row(
                   children: [
                     Expanded(child: _metricCardBox('KPI Match', '0.0%', Icons.radio_button_checked, 'Taxa de correspondência')),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 16),
                     Expanded(child: _metricCardBox('Conversão', '0%', Icons.insert_chart_outlined, 'Sem dados ainda')),
                   ],
                 ),
@@ -988,7 +988,7 @@ class _ICPConfigWidgetState extends State<ICPConfigWidget> {
                     style: t.bodyMedium,
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 16),
                 Expanded(
                   child: TextField(
                     controller: idadeMaxCtrl,
@@ -999,7 +999,7 @@ class _ICPConfigWidgetState extends State<ICPConfigWidget> {
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
             Row(
               children: [
                 Expanded(
@@ -1011,7 +1011,7 @@ class _ICPConfigWidgetState extends State<ICPConfigWidget> {
                     style: t.bodyMedium,
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 16),
                 Expanded(
                   child: TextField(
                     controller: rendaMaxCtrl,
@@ -1023,7 +1023,7 @@ class _ICPConfigWidgetState extends State<ICPConfigWidget> {
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
             Row(
               children: [
                 Expanded(
@@ -1033,7 +1033,7 @@ class _ICPConfigWidgetState extends State<ICPConfigWidget> {
                     style: t.bodyMedium,
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 16),
                 Expanded(
                   child: TextField(
                     controller: escolaridadeCtrl,
@@ -1043,14 +1043,14 @@ class _ICPConfigWidgetState extends State<ICPConfigWidget> {
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
             Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text('Estados', style: t.titleSmall),
-              const SizedBox(height: 8),
+              const SizedBox(height: 10),
               _chipGroup(estadosOpts, selectedEstados),
-              const SizedBox(height: 16),
+              const SizedBox(height: 18),
               Text('Regiões', style: t.titleSmall),
-              const SizedBox(height: 8),
+              const SizedBox(height: 10),
               _chipGroup(regioesOpts, selectedRegioes),
             ]),
           ],
@@ -1067,7 +1067,7 @@ class _ICPConfigWidgetState extends State<ICPConfigWidget> {
                     style: t.bodyMedium,
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 16),
                 Expanded(
                   child: TextField(
                     controller: tempoMercadoCtrl,
@@ -1077,7 +1077,7 @@ class _ICPConfigWidgetState extends State<ICPConfigWidget> {
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
             Row(
               children: [
                 Expanded(
@@ -1088,14 +1088,14 @@ class _ICPConfigWidgetState extends State<ICPConfigWidget> {
                     style: t.bodyMedium,
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 16),
                 Expanded(child: Container()),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
             Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text('Segmentos', style: t.titleSmall),
-              const SizedBox(height: 8),
+              const SizedBox(height: 10),
               _chipGroup(segmentosOpts, selectedSegmentos),
             ]),
           ],
@@ -1105,10 +1105,10 @@ class _ICPConfigWidgetState extends State<ICPConfigWidget> {
           children: [
             Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text('Canais', style: t.titleSmall),
-              const SizedBox(height: 8),
+              const SizedBox(height: 10),
               _chipGroup(canaisOpts, selectedCanais),
             ]),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
             Row(
               children: [
                 Expanded(
@@ -1118,7 +1118,7 @@ class _ICPConfigWidgetState extends State<ICPConfigWidget> {
                     style: t.bodyMedium,
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 16),
                 Expanded(
                   child: TextField(
                     controller: horarioCtrl,
@@ -1128,7 +1128,7 @@ class _ICPConfigWidgetState extends State<ICPConfigWidget> {
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
             Row(
               children: [
                 Expanded(
@@ -1138,7 +1138,7 @@ class _ICPConfigWidgetState extends State<ICPConfigWidget> {
                     style: t.bodyMedium,
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 16),
                 Expanded(child: Container()),
               ],
             ),
@@ -1156,11 +1156,11 @@ class _ICPConfigWidgetState extends State<ICPConfigWidget> {
                     style: t.bodyMedium,
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 16),
                 Expanded(child: Container()),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
             Row(
               children: [
                 Expanded(
@@ -1179,7 +1179,7 @@ class _ICPConfigWidgetState extends State<ICPConfigWidget> {
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
             Row(
               children: [
                 Expanded(
@@ -1191,7 +1191,7 @@ class _ICPConfigWidgetState extends State<ICPConfigWidget> {
                     style: t.bodyMedium,
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 16),
                 Expanded(
                   child: TextField(
                     controller: budgetMaxCtrl,
@@ -1214,7 +1214,7 @@ class _ICPConfigWidgetState extends State<ICPConfigWidget> {
               decoration: _inputDeco('Dores', 'Principais desafios'),
               style: t.bodyMedium,
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
             TextField(
               controller: objetivosCtrl,
               maxLines: 3,
@@ -1255,7 +1255,7 @@ class _ICPConfigWidgetState extends State<ICPConfigWidget> {
                     ],
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 16),
                 Expanded(
                   child: Column(
                     children: [
@@ -1279,7 +1279,7 @@ class _ICPConfigWidgetState extends State<ICPConfigWidget> {
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
             Row(
               children: [
                 Expanded(
@@ -1302,7 +1302,7 @@ class _ICPConfigWidgetState extends State<ICPConfigWidget> {
                     ),
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 16),
                 Expanded(child: Container()),
               ],
             ),
@@ -1358,8 +1358,8 @@ class _ICPConfigWidgetState extends State<ICPConfigWidget> {
     } catch (_) {}
 
     Widget icpPanel = Container(
-      height: 440,
-      padding: const EdgeInsets.all(16),
+      height: 700,
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
       decoration: BoxDecoration(
         color: t.secondaryBackground,
         borderRadius: BorderRadius.circular(12),
@@ -1369,7 +1369,7 @@ class _ICPConfigWidgetState extends State<ICPConfigWidget> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _icpHeader(),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           Row(
             children: [
               _stepCircle(0), _stepLine(),
@@ -1380,13 +1380,11 @@ class _ICPConfigWidgetState extends State<ICPConfigWidget> {
               _stepCircle(5),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
           Expanded(
-            child: SingleChildScrollView(
-              child: stepContent(),
-            ),
+            child: stepContent(),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
           Row(
             children: [
               ElevatedButton(
