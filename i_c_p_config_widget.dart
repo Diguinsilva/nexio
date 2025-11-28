@@ -31,6 +31,12 @@ class _ICPConfigWidgetState extends State<ICPConfigWidget> {
   bool isLoading = true;
   bool isSaving = false;
 
+  // Controle de planos
+  String planType = 'Performance';
+  int planMonthlyLimit = 70;
+  int leadsRecebidosMes = 0;
+  int leadsDisponiveis = 70;
+
   int currentStep = 0;
   final int totalSteps = 6;
 
@@ -128,6 +134,8 @@ class _ICPConfigWidgetState extends State<ICPConfigWidget> {
           .maybeSingle();
       companyId = data?['company_id'];
       if (companyId != null) {
+        await _loadCompanyPlan();
+        await _countLeadsRecebidos();
         await _loadICP();
         await _loadLeads();
       }
@@ -135,6 +143,54 @@ class _ICPConfigWidgetState extends State<ICPConfigWidget> {
       _showToastTopRight('Erro ao carregar: $e', false);
     } finally {
       if (mounted) setState(() => isLoading = false);
+    }
+  }
+
+  Future<void> _loadCompanyPlan() async {
+    try {
+      final data = await SupaFlow.client
+          .from('companies')
+          .select('plan_type, plan_monthly_limit')
+          .eq('id', companyId!)
+          .maybeSingle();
+
+      if (data != null && mounted) {
+        setState(() {
+          planType = data['plan_type'] ?? 'Performance';
+          planMonthlyLimit = data['plan_monthly_limit'] ?? 70;
+        });
+      }
+    } catch (e) {
+      // Se der erro, mantém valores padrão
+    }
+  }
+
+  Future<void> _countLeadsRecebidos() async {
+    try {
+      final now = DateTime.now();
+      final firstDayOfMonth = DateTime(now.year, now.month, 1).toIso8601String();
+
+      final response = await SupaFlow.client
+          .from('ICP_leads')
+          .select('id')
+          .eq('company_id', companyId!)
+          .gte('created_at', firstDayOfMonth);
+
+      if (mounted) {
+        setState(() {
+          leadsRecebidosMes = (response as List).length;
+          leadsDisponiveis = planMonthlyLimit - leadsRecebidosMes;
+          if (leadsDisponiveis < 0) leadsDisponiveis = 0;
+
+          // Ajusta o slider se exceder o disponível
+          if (leadsPerDay > leadsDisponiveis) {
+            leadsPerDay = leadsDisponiveis.toDouble();
+            if (leadsPerDay < 1 && leadsDisponiveis > 0) leadsPerDay = 1;
+          }
+        });
+      }
+    } catch (e) {
+      // Se der erro, mantém valores padrão
     }
   }
 
@@ -322,11 +378,26 @@ class _ICPConfigWidgetState extends State<ICPConfigWidget> {
   }
 
   Future<void> _exportICP() async {
-    // Monta o payload com todos os dados do ICP
+    // Verifica se há leads disponíveis
+    if (leadsDisponiveis <= 0) {
+      _showToastTopRight('Limite mensal de leads atingido. Aguarde o próximo ciclo.', false);
+      return;
+    }
+
+    // Monta o payload com todos os dados do ICP + informações de plano
     final icpData = {
       'company_id': companyId,
       'icp_id': icpId,
       'user_id': userId,
+
+      // DADOS DO PLANO
+      'plan_type': planType,
+      'plan_monthly_limit': planMonthlyLimit,
+      'leads_recebidos_mes': leadsRecebidosMes,
+      'leads_disponiveis': leadsDisponiveis,
+      'leads_solicitados': leadsPerDay.toInt(),
+
+      // DEMOGRÁFICO
       'idade_min': idadeMinCtrl.text.isNotEmpty ? int.tryParse(idadeMinCtrl.text) : null,
       'idade_max': idadeMaxCtrl.text.isNotEmpty ? int.tryParse(idadeMaxCtrl.text) : null,
       'renda_min': _parseBRL(rendaMinCtrl.text),
@@ -335,21 +406,31 @@ class _ICPConfigWidgetState extends State<ICPConfigWidget> {
       'escolaridade': escolaridadeCtrl.text,
       'estados': selectedEstados,
       'regioes': selectedRegioes,
-      'segmentos': selectedSegmentos,
-      'canais': selectedCanais,
+
+      // FIRMOGRÁFICO
       'tamanho_empresa': tamanhoEmpresaCtrl.text,
       'tempo_mercado': tempoMercadoCtrl.text,
       'empresa_funcionarios': empresaFuncionariosCtrl.text.isNotEmpty ? int.tryParse(empresaFuncionariosCtrl.text) : null,
+      'segmentos': selectedSegmentos,
+
+      // CANAIS
+      'canais': selectedCanais,
       'preferencia_contato': preferenciaContatoCtrl.text,
       'horario': horarioCtrl.text,
       'linguagem': linguagemCtrl.text,
+
+      // COMPORTAMENTO
       'ciclo_compra': cicloCompraCtrl.text,
       'comprou_online': comprouOnline,
       'influenciador': influenciador,
       'budget_min': _parseBRL(budgetMinCtrl.text),
       'budget_max': _parseBRL(budgetMaxCtrl.text),
+
+      // DORES E OBJETIVOS
       'dores': desafiosCtrl.text,
       'objetivos': objetivosCtrl.text,
+
+      // PREFERÊNCIAS
       'leads_por_dia_max': leadsPerDay.toInt(),
       'usar_ia': usarIA,
       'entregar_fins_semana': entregarFds,
@@ -360,7 +441,7 @@ class _ICPConfigWidgetState extends State<ICPConfigWidget> {
     await showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => _ExportICPModal(icpData: icpData),
+      builder: (context) => _ExportICPModal(icpData: icpData, onSuccess: _countLeadsRecebidos),
     );
   }
 
@@ -467,6 +548,8 @@ class _ICPConfigWidgetState extends State<ICPConfigWidget> {
 
   Widget _dashboardSection(int leadsHoje) {
     final t = FlutterFlowTheme.of(context);
+    final percentUsed = planMonthlyLimit > 0 ? (leadsRecebidosMes / planMonthlyLimit * 100).clamp(0, 100) : 0.0;
+
     return Container(
       height: 440,
       padding: const EdgeInsets.all(16),
@@ -478,28 +561,96 @@ class _ICPConfigWidgetState extends State<ICPConfigWidget> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Dashboard de Performance', style: t.titleMedium),
-          const SizedBox(height: 4),
-          Text('Visão geral dos seus leads e métricas de conversão', style: t.labelSmall.override(fontFamily: t.labelSmallFamily, color: t.secondaryText)),
-          const SizedBox(height: 16),
-          Column(
+          Row(
             children: [
-              Row(
-                children: [
-                  Expanded(child: _metricCardBox('Leads Hoje', leadsHoje.toString(), Icons.show_chart, 'Aguardando configuração')),
-                  const SizedBox(width: 12),
-                  Expanded(child: _metricCardBox('Total de Contatos', leads.length.toString(), Icons.call, 'Leads importados')),
-                ],
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Dashboard de Performance', style: t.titleMedium),
+                    const SizedBox(height: 4),
+                    Text('Visão geral dos seus leads e métricas de conversão', style: t.labelSmall.override(fontFamily: t.labelSmallFamily, color: t.secondaryText)),
+                  ],
+                ),
               ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(child: _metricCardBox('KPI Match', '0.0%', Icons.radio_button_checked, 'Taxa de correspondência')),
-                  const SizedBox(width: 12),
-                  Expanded(child: _metricCardBox('Conversão', '0%', Icons.insert_chart_outlined, 'Sem dados ainda')),
-                ],
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: t.primary.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  'Plano: $planType',
+                  style: t.labelSmall.override(
+                    fontFamily: t.labelSmallFamily,
+                    color: t.primary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
             ],
+          ),
+          const SizedBox(height: 12),
+          // Indicador de progresso do plano
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: cardBg,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: t.alternate),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('Leads Mensais', style: t.labelMedium),
+                    Text('$leadsRecebidosMes / $planMonthlyLimit', style: t.titleSmall.override(fontFamily: t.titleSmallFamily, color: t.primary)),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: percentUsed / 100,
+                    minHeight: 8,
+                    backgroundColor: t.alternate,
+                    color: percentUsed >= 90 ? const Color(0xFFEF4444) : t.primary,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '$leadsDisponiveis leads disponíveis',
+                  style: t.labelSmall.override(
+                    fontFamily: t.labelSmallFamily,
+                    color: leadsDisponiveis > 0 ? const Color(0xFF22C55E) : const Color(0xFFEF4444),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          Expanded(
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    Expanded(child: _metricCardBox('Leads Hoje', leadsHoje.toString(), Icons.show_chart, 'Recebidos hoje')),
+                    const SizedBox(width: 12),
+                    Expanded(child: _metricCardBox('Total de Contatos', leads.length.toString(), Icons.call, 'Leads importados')),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(child: _metricCardBox('KPI Match', '0.0%', Icons.radio_button_checked, 'Taxa de correspondência')),
+                    const SizedBox(width: 12),
+                    Expanded(child: _metricCardBox('Conversão', '0%', Icons.insert_chart_outlined, 'Sem dados ainda')),
+                  ],
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -1073,6 +1224,9 @@ class _ICPConfigWidgetState extends State<ICPConfigWidget> {
           ],
         );
       default:
+        final maxLeadsSlider = leadsDisponiveis > 0 ? leadsDisponiveis.toDouble() : 1.0;
+        final divisionsSlider = leadsDisponiveis > 1 ? leadsDisponiveis - 1 : 0;
+
         return Column(
           children: [
             Row(
@@ -1081,8 +1235,23 @@ class _ICPConfigWidgetState extends State<ICPConfigWidget> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Leads por dia', style: t.titleSmall),
-                      Slider(value: leadsPerDay, min: 1, max: 20, divisions: 19, label: leadsPerDay.round().toString(), onChanged: (v) => setState(() => leadsPerDay = v)),
+                      Text('Leads por dia (Disponíveis: $leadsDisponiveis)', style: t.titleSmall),
+                      Slider(
+                        value: leadsPerDay.clamp(1, maxLeadsSlider),
+                        min: 1,
+                        max: maxLeadsSlider,
+                        divisions: divisionsSlider,
+                        label: '${leadsPerDay.round()} leads',
+                        onChanged: leadsDisponiveis > 0 ? (v) => setState(() => leadsPerDay = v) : null,
+                      ),
+                      if (leadsDisponiveis <= 0)
+                        Text(
+                          'Limite mensal atingido',
+                          style: t.labelSmall.override(
+                            fontFamily: t.labelSmallFamily,
+                            color: const Color(0xFFEF4444),
+                          ),
+                        ),
                     ],
                   ),
                 ),
@@ -1332,8 +1501,9 @@ class _ICPConfigWidgetState extends State<ICPConfigWidget> {
 
 class _ExportICPModal extends StatefulWidget {
   final Map<String, dynamic> icpData;
+  final Function? onSuccess;
 
-  const _ExportICPModal({required this.icpData});
+  const _ExportICPModal({required this.icpData, this.onSuccess});
 
   @override
   State<_ExportICPModal> createState() => _ExportICPModalState();
@@ -1376,6 +1546,11 @@ class _ExportICPModalState extends State<_ExportICPModal> {
               state = 'success';
               leadsCount = responseData['leads_count'] ?? responseData['leadsCount'] ?? 0;
               leads = responseData['leads'] ?? [];
+
+              // Chama o callback de sucesso para atualizar contadores
+              if (widget.onSuccess != null) {
+                widget.onSuccess!();
+              }
             } else {
               state = 'error';
               errorMessage = responseData['message'] ?? 'Erro ao processar leads. Tente novamente.';
