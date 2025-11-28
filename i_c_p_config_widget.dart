@@ -12,6 +12,8 @@ import 'package:flutter/material.dart';
 // DO NOT REMOVE OR MODIFY THE CODE ABOVE!
 
 import 'package:flutter/services.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 
 class ICPConfigWidget extends StatefulWidget {
   const ICPConfigWidget({super.key, this.width, this.height});
@@ -320,10 +322,45 @@ class _ICPConfigWidgetState extends State<ICPConfigWidget> {
   }
 
   Future<void> _exportICP() async {
+    // Monta o payload com todos os dados do ICP
+    final icpData = {
+      'company_id': companyId,
+      'icp_id': icpId,
+      'user_id': userId,
+      'idade_min': idadeMinCtrl.text.isNotEmpty ? int.tryParse(idadeMinCtrl.text) : null,
+      'idade_max': idadeMaxCtrl.text.isNotEmpty ? int.tryParse(idadeMaxCtrl.text) : null,
+      'renda_min': _parseBRL(rendaMinCtrl.text),
+      'renda_max': _parseBRL(rendaMaxCtrl.text),
+      'genero': generoCtrl.text,
+      'escolaridade': escolaridadeCtrl.text,
+      'estados': selectedEstados,
+      'regioes': selectedRegioes,
+      'segmentos': selectedSegmentos,
+      'canais': selectedCanais,
+      'tamanho_empresa': tamanhoEmpresaCtrl.text,
+      'tempo_mercado': tempoMercadoCtrl.text,
+      'empresa_funcionarios': empresaFuncionariosCtrl.text.isNotEmpty ? int.tryParse(empresaFuncionariosCtrl.text) : null,
+      'preferencia_contato': preferenciaContatoCtrl.text,
+      'horario': horarioCtrl.text,
+      'linguagem': linguagemCtrl.text,
+      'ciclo_compra': cicloCompraCtrl.text,
+      'comprou_online': comprouOnline,
+      'influenciador': influenciador,
+      'budget_min': _parseBRL(budgetMinCtrl.text),
+      'budget_max': _parseBRL(budgetMaxCtrl.text),
+      'dores': desafiosCtrl.text,
+      'objetivos': objetivosCtrl.text,
+      'leads_por_dia_max': leadsPerDay.toInt(),
+      'usar_ia': usarIA,
+      'entregar_fins_semana': entregarFds,
+      'prioridade': prioridade,
+      'notificar_novos_leads': notificarNovosLeads,
+    };
+
     await showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => _ExportICPModal(),
+      builder: (context) => _ExportICPModal(icpData: icpData),
     );
   }
 
@@ -1294,6 +1331,10 @@ class _ICPConfigWidgetState extends State<ICPConfigWidget> {
 }
 
 class _ExportICPModal extends StatefulWidget {
+  final Map<String, dynamic> icpData;
+
+  const _ExportICPModal({required this.icpData});
+
   @override
   State<_ExportICPModal> createState() => _ExportICPModalState();
 }
@@ -1302,6 +1343,10 @@ class _ExportICPModalState extends State<_ExportICPModal> {
   String state = 'loading'; // loading, success, error
   int leadsCount = 0;
   String errorMessage = '';
+  List<dynamic> leads = [];
+
+  // URL do webhook N8N
+  static const String webhookUrl = 'https://vendai-n8n.aw5nou.easypanel.host/webhook/eaeeb03b-7336-4e40-ac00-6d644100c6b1';
 
   @override
   void initState() {
@@ -1311,17 +1356,40 @@ class _ExportICPModalState extends State<_ExportICPModal> {
 
   Future<void> _processExport() async {
     try {
-      await Future.delayed(const Duration(seconds: 3));
-      // Simula processamento de leads
-      leadsCount = 47; // Em produção, isso viria da API
-      if (mounted) {
-        setState(() => state = 'success');
+      // Faz POST para o webhook N8N
+      final response = await http.post(
+        Uri.parse(webhookUrl),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode(widget.icpData),
+      );
+
+      if (response.statusCode == 200) {
+        // Parse da resposta
+        final responseData = jsonDecode(response.body);
+
+        if (mounted) {
+          setState(() {
+            // Verifica se foi sucesso
+            if (responseData['success'] == true) {
+              state = 'success';
+              leadsCount = responseData['leads_count'] ?? responseData['leadsCount'] ?? 0;
+              leads = responseData['leads'] ?? [];
+            } else {
+              state = 'error';
+              errorMessage = responseData['message'] ?? 'Erro ao processar leads. Tente novamente.';
+            }
+          });
+        }
+      } else {
+        throw Exception('Erro HTTP ${response.statusCode}');
       }
     } catch (e) {
       if (mounted) {
         setState(() {
           state = 'error';
-          errorMessage = 'Não foi possível conectar ao servidor. Tente novamente.';
+          errorMessage = 'Não foi possível conectar ao servidor. Verifique sua conexão e tente novamente.';
         });
       }
     }
