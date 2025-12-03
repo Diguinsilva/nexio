@@ -1,5 +1,19 @@
 # 📊 NEXIO - Dashboard de Leads para FlutterFlow
 
+## ✨ NOVO: Widget Completo e Corrigido!
+
+🎉 **Agora disponível:** Widget 100% funcional em arquivo único!
+
+- ✅ **Cards dinâmicos** - Atualizam automaticamente com cada filtro
+- ✅ **DatePicker funcional** - Selecione períodos customizados
+- ✅ **Funil dinâmico** - Sincronizado com filtros
+- ✅ **Código completo** - Tudo em um único arquivo Dart
+
+📄 **Arquivo:** `flutterflow/dashboard_leads_widget.dart`
+📖 **Guia de correções:** `CORRECOES_IMPLEMENTADAS.md`
+
+---
+
 ## 🎯 Sobre o Projeto
 
 Dashboard completo de gerenciamento de leads desenvolvido para **FlutterFlow** com integração ao **Supabase**.
@@ -24,12 +38,14 @@ nexio/
 ├── README.md                          # Este arquivo
 ├── GUIA_IMPLEMENTACAO.md              # Guia completo passo a passo
 ├── CODIGO_COMPLETO_FLUTTERFLOW.md     # Códigos prontos para copiar
+├── CORRECOES_IMPLEMENTADAS.md         # ✅ NOVO: Correções e melhorias
 ├── database/
 │   ├── schema.sql                     # Schema do banco de dados
 │   └── queries.sql                    # Queries e funções SQL
 └── flutterflow/
     ├── custom_actions.dart            # 12 Custom Actions
-    └── custom_widgets.dart            # 4 Custom Widgets
+    ├── custom_widgets.dart            # 4 Custom Widgets
+    └── dashboard_leads_widget.dart    # ✅ NOVO: Widget completo e corrigido
 ```
 
 ---
